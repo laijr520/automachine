@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>必要性证明：PDA 到 CFG 的逆向理解</title>
+  <style>
+    :root{
+      --bg:#f8fbff;
+      --panel:#ffffff;
+      --ink:#172033;
+      --muted:#5b6475;
+      --purple:#7c3aed;
+      --blue:#2563eb;
+      --cyan:#0891b2;
+      --green:#16a34a;
+      --amber:#f59e0b;
+      --rose:#e11d48;
+      --shadow:0 18px 44px rgba(44,88,180,.12);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 0 0, rgba(124,58,237,.13), transparent 24%),
+        radial-gradient(circle at 100% 0, rgba(14,165,233,.11), transparent 24%),
+        linear-gradient(180deg,#f8fbff 0%,#f3f6ff 100%);
+    }
+    .wrap{max-width:1440px; margin:0 auto; padding:24px}
+    .hero{
+      display:grid;
+      grid-template-columns:1.25fr .95fr;
+      gap:20px;
+      background:linear-gradient(135deg,#1d4ed8,#7c3aed 70%, #a855f7);
+      color:#fff;
+      border-radius:28px;
+      padding:28px 30px;
+      box-shadow:var(--shadow);
+      align-items:center;
+    }
+    .hero h1{margin:0 0 10px; font-size:40px; line-height:1.08}
+    .hero p{margin:0; font-size:18px; line-height:1.72; color:rgba(255,255,255,.92)}
+    .tag-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px}
+    .tag{padding:8px 12px; border-radius:999px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18); font-size:14px}
+    .hero-card{background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.16); border-radius:24px; padding:18px 20px}
+    .hero-card .small{font-size:14px; opacity:.9; margin-bottom:8px}
+    .hero-card .formula{font-size:34px; line-height:1.45; font-weight:800; text-align:center; margin:10px 0}
+    .hero-card .explain{font-size:15px; line-height:1.75; color:rgba(255,255,255,.92)}
+    .grid{margin-top:22px; display:grid; grid-template-columns:1.02fr .98fr; gap:22px; align-items:start}
+    .panel{background:#fff; border:1px solid rgba(37,99,235,.08); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
+    .head{padding:18px 22px 14px; border-bottom:1px solid rgba(37,99,235,.08); display:flex; justify-content:space-between; align-items:center; gap:12px}
+    .head h2{margin:0; font-size:24px}
+    .caption{font-size:14px; color:var(--muted); line-height:1.6}
+    .steps{padding:18px 22px 4px; display:grid; grid-template-columns:repeat(5,1fr); gap:10px}
+    .chip{min-height:92px; border:1px solid #dbe7ff; border-radius:18px; background:#f8fbff; padding:10px; cursor:pointer; transition:.22s ease}
+    .chip:hover{transform:translateY(-2px); box-shadow:0 10px 20px rgba(37,99,235,.10)}
+    .chip.active{background:linear-gradient(135deg,#2563eb,#7c3aed); border-color:transparent; color:#fff}
+    .chip .n{font-size:12px; opacity:.84}
+    .chip .t{margin-top:6px; font-size:17px; font-weight:800; line-height:1.22}
+    .chip .d{margin-top:6px; font-size:12px; opacity:.84}
+    .body{padding:0 22px 22px}
+    .statement{padding:18px 20px; border-radius:20px; border:1px solid #dce7ff; background:linear-gradient(180deg,#f8fbff,#f2f7ff); margin-bottom:16px}
+    .statement .title{color:#1d4ed8; font-size:16px; font-weight:800; margin-bottom:10px}
+    .statement .formula{font-size:33px; font-weight:800; text-align:center; line-height:1.55; margin-bottom:10px}
+    .statement .desc{font-size:15px; line-height:1.75; color:var(--muted)}
+    .twocol{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px}
+    .card{background:#fff; border:1px solid #e3ecff; border-radius:20px; padding:16px}
+    .card h3{margin:0 0 10px; font-size:18px}
+    .card p{margin:0; color:var(--muted); line-height:1.75; font-size:15px}
+    .viz{display:grid; grid-template-columns:1fr; gap:14px}
+    .belt-box, .stack-box, .derive-box{background:#fbfdff; border:1px solid #e3ecff; border-radius:20px; padding:16px}
+    .belt-title,.stack-title,.derive-title{font-size:17px; font-weight:800; margin-bottom:12px}
+    .belt{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+    .token{min-width:56px; text-align:center; padding:12px 10px; border-radius:14px; color:#fff; font-weight:800; box-shadow:0 10px 20px rgba(37,99,235,.12)}
+    .token.t1{background:#3b82f6}
+    .token.t2{background:#06b6d4}
+    .token.t3{background:#14b8a6}
+    .token.t4{background:#22c55e}
+    .token.t5{background:#f59e0b}
+    .stack{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap}
+    .sym{width:96px; text-align:center; border-radius:16px; background:#faf5ff; border:1px solid #eadcff; padding:12px 10px}
+    .sym .name{font-size:22px; font-weight:800; color:#6d28d9}
+    .sym .sub{margin-top:4px; font-size:13px; color:var(--muted)}
+    .sym.active{background:linear-gradient(180deg,#ede9fe,#faf5ff); box-shadow:0 10px 20px rgba(124,58,237,.12)}
+    .arrow{font-size:28px; color:#94a3b8; margin:0 4px}
+    .derive-chain{display:flex; flex-direction:column; gap:10px}
+    .derive-step{padding:12px 14px; border-radius:16px; border:1px solid #e3ecff; background:#fff; font-size:18px; line-height:1.55}
+    .derive-step strong{color:#1d4ed8}
+    .derive-step.active{background:#f5f9ff; box-shadow:0 10px 20px rgba(37,99,235,.08)}
+    .idea-list{display:grid; gap:12px; padding:18px 22px 22px}
+    .idea{background:#fbfdff; border:1px solid #e3ecff; border-radius:20px; padding:16px; position:relative; overflow:hidden}
+    .idea::before{content:""; position:absolute; left:0; top:0; bottom:0; width:6px; background:linear-gradient(180deg,#2563eb,#7c3aed)}
+    .idea h4{margin:0 0 8px; font-size:17px}
+    .idea p{margin:0; color:var(--muted); line-height:1.75; font-size:15px}
+    .controls{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px}
+    button{border:none; border-radius:14px; padding:11px 16px; font-size:15px; font-weight:800; cursor:pointer; transition:.2s ease}
+    button:hover{transform:translateY(-1px)}
+    .btn1{background:linear-gradient(135deg,#2563eb,#7c3aed); color:#fff}
+    .btn2{background:#eef5ff; color:#1d4ed8}
+    .btn3{background:#f5edff; color:#7c3aed}
+    .summary{margin-top:16px; padding:15px 16px; border-radius:18px; background:linear-gradient(90deg,#eff6ff,#f5f3ff); border:1px solid #dbe7ff; line-height:1.75; font-size:15px}
+    .progress-wrap{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:14px}
+    .progress{width:180px; height:10px; border-radius:999px; background:#e7efff; overflow:hidden}
+    .bar{height:100%; width:0%; background:linear-gradient(90deg,#2563eb,#7c3aed); transition:.25s ease}
+    @media (max-width:1160px){.hero,.grid,.twocol{grid-template-columns:1fr}.steps{grid-template-columns:repeat(3,1fr)}}
+    @media (max-width:760px){.wrap{padding:14px}.hero h1{font-size:30px}.statement .formula{font-size:24px}.steps{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <h1>必要性证明：<br>为什么 <span style="color:#fef08a">PDA 接受</span> 反过来推出 <span style="color:#bfdbfe">文法可派生</span>？</h1>
+        <p>这一版把 PPT 第 21–23 页改造成“输入带消耗”和“栈符号弹出”同步抵消的可视化演示。核心思想不再只盯着 S，而是先证明一个更强的命题：<strong>任意变元 A</strong> 都成立。</p>
+        <div class="tag-row">
+          <div class="tag">总目标： (q,w,S) ⊢* (q,ε,ε) ⟹ S ⇒* w</div>
+          <div class="tag">更强命题： (q,x,A) ⊢* (q,ε,ε) ⟹ A ⇒* x</div>
+          <div class="tag">证明方法：对 ID 转移步数归纳</div>
+        </div>
+      </div>
+      <div class="hero-card">
+        <div class="small">一句话直觉</div>
+        <div class="formula">“栈里弹掉什么，文法里就派生出什么。”</div>
+        <div class="explain">如果从 ID <strong>(q,x,A)</strong> 出发，最后把输入 x 全部读完、把栈顶 A 也完全弹空，那么这整个过程就能被解释成：<strong>A 派生出了 x</strong>。PDA 的运行历史，正好可反译成一棵文法推导树。</div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="head">
+          <div>
+            <h2>证明分解</h2>
+            <div class="caption">点击任一步，观察“输入带”和“栈符号”怎样对应起来。</div>
+          </div>
+          <div class="progress-wrap">
+            <span id="progressLabel">步骤 1 / 5</span>
+            <div class="progress"><div class="bar" id="bar"></div></div>
+          </div>
+        </div>
+        <div class="steps" id="steps"></div>
+        <div class="body">
+          <div class="statement">
+            <div class="title">当前核心式子</div>
+            <div class="formula" id="formula"></div>
+            <div class="desc" id="desc"></div>
+          </div>
+
+          <div class="twocol">
+            <div class="card">
+              <h3>文法侧在说什么？</h3>
+              <p id="leftExplain"></p>
+            </div>
+            <div class="card">
+              <h3>PDA 侧在做什么？</h3>
+              <p id="rightExplain"></p>
+            </div>
+          </div>
+
+          <div class="viz">
+            <div class="belt-box">
+              <div class="belt-title">输入带被“切分”为若干段 x<sub>1</sub>, x<sub>2</sub>, …, x<sub>m</sub></div>
+              <div class="belt" id="belt"></div>
+              <div class="summary" id="beltSummary"></div>
+            </div>
+
+            <div class="stack-box">
+              <div class="stack-title">一次展开：A → Y<sub>1</sub>Y<sub>2</sub>…Y<sub>m</sub></div>
+              <div class="stack" id="stack"></div>
+              <div class="summary" id="stackSummary"></div>
+            </div>
+
+            <div class="derive-box">
+              <div class="derive-title">把“逐个弹栈”改写成“逐步派生”</div>
+              <div class="derive-chain" id="deriveChain"></div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="btn2" id="prev">上一步</button>
+            <button class="btn1" id="play">自动播放</button>
+            <button class="btn3" id="next">下一步</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="head">
+          <div>
+            <h2>课堂讲法建议</h2>
+            <div class="caption">把公式转成更容易说出口的中文逻辑。</div>
+          </div>
+        </div>
+        <div class="idea-list">
+          <div class="idea">
+            <h4>① 先证明更强命题，而不是直接证明 S</h4>
+            <p>因为归纳时会遇到很多“中间栈符号”或“中间变元”。若只证明 S，递推时就接不上；证明任意 A，才能在展开 <strong>A → Y<sub>1</sub>…Y<sub>m</sub></strong> 后，把每个 Y<sub>i</sub> 都交给归纳假设处理。</p>
+          </div>
+          <div class="idea">
+            <h4>② “消耗输入 x” 与 “弹出栈符号 A” 是同一件事的两面</h4>
+            <p>PPT 21 页的那句“相互抵消”很关键。一个变元 A 最终从栈里消失，意味着它负责的那部分输入也正好被消费完，于是 A 在文法里就应当派生出对应的那一段字符串。</p>
+          </div>
+          <div class="idea">
+            <h4>③ 递推本质：把一个大问题切成 m 个小问题</h4>
+            <p>若 A 第一步被展开成 <strong>Y<sub>1</sub>Y<sub>2</sub>…Y<sub>m</sub></strong>，那么整个输入 x 也会自然分解成 <strong>x<sub>1</sub>x<sub>2</sub>…x<sub>m</sub></strong>。再用归纳假设分别推出 <strong>Y<sub>i</sub> ⇒* x<sub>i</sub></strong>，最后顺着产生式拼起来即可。</p>
+          </div>
+          <div class="idea">
+            <h4>④ 收尾时只需代回 A=S, x=w</h4>
+            <p>一旦更强命题已经证明完成，原命题就是它的特例。于是从 <strong>(q,w,S) ⊢* (q,ε,ε)</strong> 立刻得到 <strong>S ⇒* w</strong>，必要性成立。</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const tokens = [
+      {txt:'x₁', cls:'t1'},
+      {txt:'x₂', cls:'t2'},
+      {txt:'x₃', cls:'t3'},
+      {txt:'x₄', cls:'t4'}
+    ];
+    const symbols = ['Y₁','Y₂','Y₃','Y₄'];
+    const steps = [
+      {
+        title:'总目标与强化命题',
+        desc:'先把原命题抬高成一个更一般的结论。',
+        formula:'(q,w,S) ⊢<sup>*</sup> (q,ε,ε) ⟹ S ⇒<sup>*</sup> w<br><span style="font-size:.78em;color:#1d4ed8">更强地： (q,x,A) ⊢<sup>*</sup> (q,ε,ε) ⟹ A ⇒<sup>*</sup> x</span>',
+        long:'原命题只谈开始符号 S；但归纳时真正会反复出现的是任意中间变元 A。所以先证明更强命题，最后再取 A=S, x=w 即可。',
+        left:'文法侧目标是：只要某个变元 A 对应的那段处理已经全部完成，就说明 A 的确能派生出那一段字符串 x。',
+        right:'PDA 侧看到的是：从 (q,x,A) 出发，最终把输入 x 读空，同时把栈顶 A 也完全消掉。',
+        active:1,
+        chain:[
+          '目标不是直接追 S，而是先追踪任意 <strong>A</strong>。',
+          '这样后面展开 A → Y₁…Yₘ 时，才能逐个把 Yᵢ 套进归纳假设。'
+        ],
+        beltSummary:'先把“某段输入 x 被完全吃掉”想成一个整体，后面再把它拆成 x₁、x₂、…、xₘ。',
+        stackSummary:'先把“栈顶 A 被完全弹出”想成一个整体，后面再追问它第一步是怎样展开的。'
+      },
+      {
+        title:'归纳基础',
+        desc:'ID 只用 1 次转移就把 A 弹空。',
+        formula:'i = 1: &nbsp;&nbsp;&nbsp;&nbsp; (q,x,A) ⊢ (q,ε,ε) ⟹ x = ε,&nbsp; A → ε',
+        long:'如果一步之内就从 (q,x,A) 到达 (q,ε,ε)，那么唯一可能是：PDA 用某条对应产生式 A→ε 的规则，直接把 A 弹掉，且没有再读任何输入。因此 x=ε，故 A⇒*ε。',
+        left:'文法侧只可能发生最简单的一种推导：A 直接推出 ε。',
+        right:'PDA 侧也只可能发生最简单的一种动作：一次 ε-转移直接把栈顶 A 消掉。',
+        active:1,
+        chain:[
+          '<strong>A ⇒ ε</strong>',
+          '因此 <strong>A ⇒* x</strong>，其中 x = ε。'
+        ],
+        beltSummary:'因为一步完成，所以没有真正读入任何终结符，整段输入只能是 ε。',
+        stackSummary:'因为一步完成，所以 A 不会再展开成多个符号，而是直接对应产生式 A→ε。'
+      },
+      {
+        title:'递推：先看第一步',
+        desc:'假设 i≤n 成立，分析 i=n+1 时第一步把 A 变成什么。',
+        formula:'A ⟹ Y<sub>1</sub>Y<sub>2</sub>⋯ Y<sub>m</sub>, &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (q,x,A) ⊢ (q,x,Y<sub>1</sub>Y<sub>2</sub>⋯ Y<sub>m</sub>)',
+        long:'由于 A 是变元，它的第一步不可能直接匹配某个终结符串并全部结束；第一步一定是利用某个产生式把 A 展开成一串栈符号 Y₁…Yₘ。之后剩下的 n 步，就是把这串 Yᵢ 逐个完全弹出。',
+        left:'文法侧的第一步已经确定：A 先推出 Y₁Y₂…Yₘ。',
+        right:'PDA 侧的第一步也对应地确定：先把栈顶 A 改写成 Y₁Y₂…Yₘ。',
+        active:4,
+        chain:[
+          '<strong>A ⇒ Y₁Y₂…Yₘ</strong>',
+          '接下来只要证明每个 <strong>Yᵢ ⇒* xᵢ</strong>，就能把整串拼起来。'
+        ],
+        beltSummary:'这时输入 x 还没拆开，但很快会因为后续逐个弹出 Yᵢ 而自然分成多段。',
+        stackSummary:'栈上现在顶层任务已经变成：依次处理 Y₁、Y₂、…、Yₘ。'
+      },
+      {
+        title:'把 x 分成 x₁x₂…xₘ',
+        desc:'每个 Yᵢ 完全弹出时，都会对应消耗一段输入。',
+        formula:'x = x<sub>1</sub>x<sub>2</sub>⋯ x<sub>m</sub>, &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (q,x<sub>i</sub>,Y<sub>i</sub>) ⊢<sup>*</sup> (q,ε,ε) ⟹ Y<sub>i</sub> ⇒<sup>*</sup> x<sub>i</sub>',
+        long:'在剩余的 n 步里，每个 Yᵢ 最终都会被完全弹出。把弹出 Yᵢ 时所消耗掉的那段输入记为 xᵢ，就得到 x = x₁x₂…xₘ。由于每个 Yᵢ 各自被弹空所需的步数都不超过 n，故可对每个 Yᵢ 应用归纳假设。',
+        left:'文法侧获得 m 个小结论：Y₁⇒*x₁, Y₂⇒*x₂, …, Yₘ⇒*xₘ。',
+        right:'PDA 侧则是把一个长运行分解成 m 段“局部完成”的小运行。',
+        active:4,
+        chain:[
+          '由归纳假设：<strong>Y₁ ⇒* x₁</strong>',
+          '由归纳假设：<strong>Y₂ ⇒* x₂</strong>',
+          '…',
+          '由归纳假设：<strong>Yₘ ⇒* xₘ</strong>'
+        ],
+        beltSummary:'现在输入不再被看成一个整体，而是被切成若干段，每一段都交给一个 Yᵢ 负责。',
+        stackSummary:'每个 Yᵢ 只要被完全弹出，就说明它在文法里能派生出自己负责的那一段 xᵢ。'
+      },
+      {
+        title:'拼接回去，得出 A⇒*x',
+        desc:'把 A→Y₁…Yₘ 和各个 Yᵢ⇒*xᵢ 接起来。',
+        formula:'A ⇒ Y<sub>1</sub>Y<sub>2</sub>⋯ Y<sub>m</sub> ⇒<sup>*</sup> x<sub>1</sub>Y<sub>2</sub>⋯ Y<sub>m</sub> ⇒<sup>*</sup> x<sub>1</sub>x<sub>2</sub>⋯ x<sub>m</sub> = x',
+        long:'由 A 的产生式先得到 Y₁…Yₘ，再按顺序把每个 Yᵢ 分别替换成 xᵢ，最终得到整个输入串 x。因此 A⇒*x。最后代回 A=S, x=w，就得到原命题。',
+        left:'这就是从“树的根 A”到“所有叶子拼成 x”的完整推导。',
+        right:'这也是把一次 PDA 接受运行整体翻译成文法推导的关键步骤。',
+        active:4,
+        chain:[
+          '<strong>A ⇒ Y₁Y₂…Yₘ</strong>',
+          '<strong>⇒* x₁Y₂…Yₘ</strong>',
+          '<strong>⇒* x₁x₂…Yₘ</strong>',
+          '<strong>⇒* x₁x₂…xₘ = x</strong>',
+          '再取 <strong>A=S, x=w</strong>，得到 <strong>S ⇒* w</strong>。'
+        ],
+        beltSummary:'所有输入分段重新拼起来，就是完整的 x。',
+        stackSummary:'所有子任务 Yᵢ 都完成后，父任务 A 的责任也就完成了。'
+      }
+    ];
+
+    const stepsBox = document.getElementById('steps');
+    const formula = document.getElementById('formula');
+    const desc = document.getElementById('desc');
+    const leftExplain = document.getElementById('leftExplain');
+    const rightExplain = document.getElementById('rightExplain');
+    const belt = document.getElementById('belt');
+    const stack = document.getElementById('stack');
+    const deriveChain = document.getElementById('deriveChain');
+    const beltSummary = document.getElementById('beltSummary');
+    const stackSummary = document.getElementById('stackSummary');
+    const progressLabel = document.getElementById('progressLabel');
+    const bar = document.getElementById('bar');
+
+    let idx = 0;
+    let timer = null;
+
+    steps.forEach((s, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.innerHTML = `<div class="n">STEP ${i+1}</div><div class="t">${s.title}</div><div class="d">${s.desc}</div>`;
+      chip.addEventListener('click', () => { stop(); render(i); });
+      stepsBox.appendChild(chip);
+    });
+
+    function render(i){
+      idx = i;
+      const s = steps[i];
+      formula.innerHTML = s.formula;
+      desc.innerHTML = s.long;
+      leftExplain.innerHTML = s.left;
+      rightExplain.innerHTML = s.right;
+      belt.innerHTML = tokens.map((t, j) => `<div class="token ${t.cls}" style="opacity:${j<s.active?1:.25}">${t.txt}</div>${j<3?'<div class="arrow">＋</div>':''}`).join('');
+      stack.innerHTML = symbols.map((name, j) => `<div class="sym ${j<s.active?'active':''}" style="opacity:${j<s.active?1:.25}"><div class="name">${name}</div><div class="sub">负责派生 ${tokens[j].txt}</div></div>`).join('');
+      deriveChain.innerHTML = s.chain.map((line, k) => `<div class="derive-step ${k===s.chain.length-1?'active':''}">${line}</div>`).join('');
+      beltSummary.innerHTML = s.beltSummary;
+      stackSummary.innerHTML = s.stackSummary;
+      [...stepsBox.children].forEach((c, j) => c.classList.toggle('active', j===i));
+      progressLabel.textContent = `步骤 ${i+1} / ${steps.length}`;
+      bar.style.width = `${(i+1)/steps.length*100}%`;
+    }
+
+    function stop(){ if(timer){ clearInterval(timer); timer=null; } document.getElementById('play').textContent='自动播放'; }
+    function next(){ render((idx+1)%steps.length); }
+    function prev(){ render((idx-1+steps.length)%steps.length); }
+    function play(){
+      if(timer){ stop(); return; }
+      document.getElementById('play').textContent='停止播放';
+      timer = setInterval(() => {
+        if(idx===steps.length-1){ stop(); return; }
+        render(idx+1);
+      }, 2600);
+    }
+
+    document.getElementById('next').addEventListener('click', ()=>{ stop(); next(); });
+    document.getElementById('prev').addEventListener('click', ()=>{ stop(); prev(); });
+    document.getElementById('play').addEventListener('click', play);
+    render(0);
+  </script>
+</body>
+</html>

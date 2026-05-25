@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leftmost Derivation and Parse Tree Demo</title>
+  <style>
+    :root {
+      --bg: #f7f7fb;
+      --card: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: #d1d5db;
+      --accent: #7c3aed;
+      --accent-soft: #ede9fe;
+      --good: #059669;
+      --good-soft: #d1fae5;
+      --tree-line: #4b5563;
+      --node: #ffffff;
+      --node-border: #9ca3af;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", Arial, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #f7f7fb 0%, #eef2ff 100%);
+    }
+    .wrap {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .header {
+      background: var(--card);
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      padding: 20px 24px;
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+      margin-bottom: 18px;
+    }
+    .header h1 {
+      margin: 0 0 10px 0;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+    .header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(124, 58, 237, 0.22);
+    }
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+      box-shadow: none;
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .step-badge {
+      margin-left: auto;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.02fr 1.28fr;
+      gap: 18px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+      min-height: 720px;
+    }
+    .card h2 {
+      margin: 0 0 14px 0;
+      font-size: 22px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .grammar {
+      font-family: "Times New Roman", Georgia, serif;
+      background: #fafafa;
+      border: 1px solid #ececec;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      line-height: 1.7;
+      font-size: 19px;
+    }
+    .derivation-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .step {
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 12px 14px;
+      transition: all .2s ease;
+      background: #fff;
+    }
+    .step.active {
+      border-color: #a78bfa;
+      background: #f5f3ff;
+      box-shadow: inset 0 0 0 1px #c4b5fd;
+    }
+    .step.done {
+      background: #f9fafb;
+    }
+    .step-head {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .expr {
+      font-size: 26px;
+      line-height: 1.35;
+      font-family: "Times New Roman", Georgia, serif;
+      word-break: break-word;
+    }
+    .hl {
+      background: #fde68a;
+      color: #111827;
+      border-radius: 6px;
+      padding: 0 3px;
+    }
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .legend span::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      display: inline-block;
+      vertical-align: -1px;
+      margin-right: 6px;
+      border-radius: 50%;
+    }
+    .legend .l1::before { background: #fde68a; }
+    .legend .l2::before { background: #ede9fe; }
+    .legend .l3::before { background: #d1fae5; }
+    .tree-wrap {
+      overflow: auto;
+      border-radius: 14px;
+      border: 1px solid #ececec;
+      background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+      padding: 10px;
+    }
+    svg {
+      width: 100%;
+      min-width: 760px;
+      height: 640px;
+      display: block;
+    }
+    .edge {
+      stroke: var(--tree-line);
+      stroke-width: 2.2;
+    }
+    .edge.active {
+      stroke: var(--accent);
+      stroke-width: 4;
+    }
+    .node circle, .node rect {
+      fill: var(--node);
+      stroke: var(--node-border);
+      stroke-width: 2;
+    }
+    .node text {
+      font-family: "Times New Roman", Georgia, serif;
+      font-size: 28px;
+      dominant-baseline: middle;
+      text-anchor: middle;
+      fill: #111827;
+    }
+    .node.nt circle {
+      fill: #ffffff;
+    }
+    .node.t rect {
+      fill: #f9fafb;
+      rx: 12;
+      ry: 12;
+    }
+    .node.current circle,
+    .node.current rect {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+      stroke-width: 4;
+    }
+    .node.leaf rect {
+      fill: var(--good-soft);
+      stroke: var(--good);
+    }
+    .tree-note {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: #f9fafb;
+      border: 1px dashed #d1d5db;
+      border-radius: 12px;
+      color: #374151;
+      line-height: 1.6;
+    }
+    @media (max-width: 1100px) {
+      .grid { grid-template-columns: 1fr; }
+      .card { min-height: auto; }
+      .step-badge { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>最左推导 ↔ 语法分析树</h1>
+      <p>例子：使用文法 G<sub>exp</sub> 推导字符串 <strong>a*(a+a)</strong>。点击“下一步”时，左侧展示最左推导，右侧同步高亮对应语法分析树中的展开位置。</p>
+      <div class="toolbar">
+        <button id="prevBtn" class="secondary">上一步</button>
+        <button id="nextBtn">下一步</button>
+        <button id="playBtn" class="secondary">自动播放</button>
+        <button id="resetBtn" class="secondary">重置</button>
+        <div class="step-badge" id="stepBadge">当前：步骤 0 / 9</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>左边：最左推导</h2>
+        <div class="subtitle">每一步都只替换当前句型中最左边的非终结符。</div>
+        <div class="grammar">
+          1. E → I<br>
+          2. E → E + E<br>
+          3. E → E * E<br>
+          4. E → (E)<br>
+          5. I → a<br>
+          6. I → b<br>
+          7. I → Ia<br>
+          8. I → Ib<br>
+          9. I → I0<br>
+          10. I → I1
+        </div>
+        <div class="derivation-list" id="derivationList"></div>
+        <div class="legend">
+          <span class="l1">黄色：本步刚展开的最左非终结符</span>
+          <span class="l2">紫色：树中当前对应位置</span>
+          <span class="l3">绿色：已经到达的终结符叶子</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>右边：对应语法分析树</h2>
+        <div class="subtitle">树是完整结构；当前步骤高亮的是“这一步正在展开的那个结点”。</div>
+        <div class="tree-wrap">
+          <svg viewBox="0 0 980 640" aria-label="parse tree">
+            <!-- edges -->
+            <line id="e-root-left" class="edge" x1="490" y1="78" x2="270" y2="165" />
+            <line id="e-root-star" class="edge" x1="490" y1="78" x2="490" y2="165" />
+            <line id="e-root-right" class="edge" x1="490" y1="78" x2="710" y2="165" />
+
+            <line id="e-leftE-I" class="edge" x1="270" y1="195" x2="270" y2="280" />
+            <line id="e-leftI-a" class="edge" x1="270" y1="310" x2="270" y2="395" />
+
+            <line id="e-rightE-lp" class="edge" x1="710" y1="195" x2="560" y2="280" />
+            <line id="e-rightE-mid" class="edge" x1="710" y1="195" x2="710" y2="280" />
+            <line id="e-rightE-rp" class="edge" x1="710" y1="195" x2="860" y2="280" />
+
+            <line id="e-midE-left" class="edge" x1="710" y1="310" x2="610" y2="395" />
+            <line id="e-midE-plus" class="edge" x1="710" y1="310" x2="710" y2="395" />
+            <line id="e-midE-right" class="edge" x1="710" y1="310" x2="810" y2="395" />
+
+            <line id="e-innerLeftE-I" class="edge" x1="610" y1="425" x2="610" y2="510" />
+            <line id="e-innerLeftI-a" class="edge" x1="610" y1="540" x2="610" y2="610" />
+
+            <line id="e-innerRightE-I" class="edge" x1="810" y1="425" x2="810" y2="510" />
+            <line id="e-innerRightI-a" class="edge" x1="810" y1="540" x2="810" y2="610" />
+
+            <!-- nodes -->
+            <g id="n-rootE" class="node nt" transform="translate(490,55)">
+              <circle r="28"></circle><text y="2">E</text>
+            </g>
+            <g id="n-leftE" class="node nt" transform="translate(270,185)">
+              <circle r="28"></circle><text y="2">E</text>
+            </g>
+            <g id="n-star" class="node t" transform="translate(490,185)">
+              <rect x="-28" y="-24" width="56" height="48"></rect><text y="2">*</text>
+            </g>
+            <g id="n-rightE" class="node nt" transform="translate(710,185)">
+              <circle r="28"></circle><text y="2">E</text>
+            </g>
+
+            <g id="n-leftI" class="node nt" transform="translate(270,300)">
+              <circle r="28"></circle><text y="2">I</text>
+            </g>
+            <g id="n-lefta" class="node t leaf" transform="translate(270,420)">
+              <rect x="-28" y="-24" width="56" height="48"></rect><text y="2">a</text>
+            </g>
+
+            <g id="n-lp" class="node t leaf" transform="translate(560,300)">
+              <rect x="-28" y="-24" width="56" height="48"></rect><text y="2">(</text>
+            </g>
+            <g id="n-midE" class="node nt" transform="translate(710,300)">
+              <circle r="28"></circle><text y="2">E</text>
+            </g>
+            <g id="n-rp" class="node t leaf" transform="translate(860,300)">
+              <rect x="-28" y="-24" width="56" height="48"></rect><text y="2">)</text>
+            </g>
+
+            <g id="n-innerLeftE" class="node nt" transform="translate(610,415)">
+              <circle r="28"></circle><text y="2">E</text>
+            </g>
+            <g id="n-plus" class="node t leaf" transform="translate(710,415)">
+              <rect x="-28" y="-24" width="56" height="48"></rect><text y="2">+</text>
+            </g>
+            <g id="n-innerRightE" class="node nt" transform="translate(810,415)">
+              <circle r="28"></circle><text y="2">E</text>
+            </g>
+
+            <g id="n-innerLeftI" class="node nt" transform="translate(610,530)">
+              <circle r="28"></circle><text y="2">I</text>
+            </g>
+            <g id="n-innerLefta" class="node t leaf" transform="translate(610,612)">
+              <rect x="-28" y="-22" width="56" height="44"></rect><text y="2">a</text>
+            </g>
+
+            <g id="n-innerRightI" class="node nt" transform="translate(810,530)">
+              <circle r="28"></circle><text y="2">I</text>
+            </g>
+            <g id="n-innerRighta" class="node t leaf" transform="translate(810,612)">
+              <rect x="-28" y="-22" width="56" height="44"></rect><text y="2">a</text>
+            </g>
+          </svg>
+        </div>
+        <div class="tree-note" id="treeNote"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const steps = [
+      {
+        label: '步骤 0',
+        expr: '<span class="hl">E</span>',
+        note: '开始符号为 E。',
+        node: ['n-rootE'],
+        edges: []
+      },
+      {
+        label: '步骤 1',
+        expr: '<span class="hl">E</span> ⇒ E * E',
+        note: '先展开最左的 E，使用产生式 E → E * E。根结点长出左子树、运算符 *、右子树。',
+        node: ['n-rootE'],
+        edges: ['e-root-left', 'e-root-star', 'e-root-right']
+      },
+      {
+        label: '步骤 2',
+        expr: '<span class="hl">E</span> * E ⇒ I * E',
+        note: '继续看当前句型 E*E，最左非终结符是左边那个 E，把它替换成 I。',
+        node: ['n-leftE'],
+        edges: ['e-leftE-I']
+      },
+      {
+        label: '步骤 3',
+        expr: 'I * E ⇒ <span class="hl">a</span> * E',
+        note: '再把最左的 I 替换成 a，左侧操作数已经成为终结符。',
+        node: ['n-leftI', 'n-lefta'],
+        edges: ['e-leftI-a']
+      },
+      {
+        label: '步骤 4',
+        expr: 'a * <span class="hl">E</span> ⇒ a * (E)',
+        note: '现在句型里最左非终结符变成右边那个 E，用 E → (E)。',
+        node: ['n-rightE', 'n-lp', 'n-midE', 'n-rp'],
+        edges: ['e-rightE-lp', 'e-rightE-mid', 'e-rightE-rp']
+      },
+      {
+        label: '步骤 5',
+        expr: 'a * (<span class="hl">E</span>) ⇒ a * (E + E)',
+        note: '括号内部唯一的 E 再展开，用 E → E + E。',
+        node: ['n-midE', 'n-innerLeftE', 'n-plus', 'n-innerRightE'],
+        edges: ['e-midE-left', 'e-midE-plus', 'e-midE-right']
+      },
+      {
+        label: '步骤 6',
+        expr: 'a * (<span class="hl">E</span> + E) ⇒ a * (I + E)',
+        note: '括号中按“最左推导”，先替换左边那个 E，得到 I + E。',
+        node: ['n-innerLeftE'],
+        edges: ['e-innerLeftE-I']
+      },
+      {
+        label: '步骤 7',
+        expr: 'a * (I + E) ⇒ a * (<span class="hl">a</span> + E)',
+        note: '再把括号内左边的 I 替换成 a。',
+        node: ['n-innerLeftI', 'n-innerLefta'],
+        edges: ['e-innerLeftI-a']
+      },
+      {
+        label: '步骤 8',
+        expr: 'a * (a + <span class="hl">E</span>) ⇒ a * (a + I)',
+        note: '接下来轮到括号内右边的 E，替换成 I。',
+        node: ['n-innerRightE'],
+        edges: ['e-innerRightE-I']
+      },
+      {
+        label: '步骤 9',
+        expr: 'a * (a + I) ⇒ a * (a + <span class="hl">a</span>)',
+        note: '最后把右边的 I 替换成 a，得到目标串 a*(a+a)。',
+        node: ['n-innerRightI', 'n-innerRighta'],
+        edges: ['e-innerRightI-a']
+      }
+    ];
+
+    const derivationList = document.getElementById('derivationList');
+    const treeNote = document.getElementById('treeNote');
+    const stepBadge = document.getElementById('stepBadge');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const playBtn = document.getElementById('playBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let current = 0;
+    let timer = null;
+
+    function renderSteps() {
+      derivationList.innerHTML = steps.map((s, i) => {
+        const state = i === current ? 'active' : (i < current ? 'done' : '');
+        return `
+          <div class="step ${state}">
+            <div class="step-head">${s.label}</div>
+            <div class="expr">${s.expr}</div>
+          </div>
+        `;
+      }).join('');
+      treeNote.textContent = steps[current].note;
+      stepBadge.textContent = `当前：步骤 ${current} / ${steps.length - 1}`;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === steps.length - 1;
+    }
+
+    function clearTree() {
+      document.querySelectorAll('.node').forEach(n => n.classList.remove('current'));
+      document.querySelectorAll('.edge').forEach(e => e.classList.remove('active'));
+    }
+
+    function highlightTree() {
+      clearTree();
+      steps[current].node.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('current');
+      });
+      steps[current].edges.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+      });
+    }
+
+    function update() {
+      renderSteps();
+      highlightTree();
+    }
+
+    function stopPlay() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+        playBtn.textContent = '自动播放';
+      }
+    }
+
+    prevBtn.addEventListener('click', () => {
+      stopPlay();
+      if (current > 0) {
+        current -= 1;
+        update();
+      }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (current < steps.length - 1) {
+        current += 1;
+        update();
+      } else {
+        stopPlay();
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      stopPlay();
+      current = 0;
+      update();
+    });
+
+    playBtn.addEventListener('click', () => {
+      if (timer) {
+        stopPlay();
+        return;
+      }
+      playBtn.textContent = '暂停';
+      timer = setInterval(() => {
+        if (current < steps.length - 1) {
+          current += 1;
+          update();
+        } else {
+          stopPlay();
+        }
+      }, 1600);
+    });
+
+    update();
+  </script>
+</body>
+</html>

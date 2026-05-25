@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>充分性证明：CFG 到 PDA</title>
+  <style>
+    :root{
+      --bg:#f6f3ff;
+      --panel:#ffffff;
+      --ink:#1f2430;
+      --muted:#5a6272;
+      --purple:#7c3aed;
+      --purple-2:#a855f7;
+      --green:#16a34a;
+      --orange:#f59e0b;
+      --red:#dc2626;
+      --blue:#2563eb;
+      --shadow:0 18px 40px rgba(92, 54, 181, 0.14);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(168,85,247,.16), transparent 28%),
+        radial-gradient(circle at 100% 0, rgba(59,130,246,.10), transparent 24%),
+        linear-gradient(180deg,#faf7ff 0%, #f6f7ff 100%);
+      min-height:100vh;
+    }
+    .wrap{
+      max-width:1420px;
+      margin:0 auto;
+      padding:24px;
+    }
+    .hero{
+      background:linear-gradient(135deg, rgba(124,58,237,.95), rgba(168,85,247,.85));
+      color:#fff;
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      padding:28px 30px;
+      display:grid;
+      grid-template-columns:1.3fr .9fr;
+      gap:24px;
+      align-items:center;
+    }
+    .hero h1{
+      margin:0 0 10px;
+      font-size:40px;
+      line-height:1.08;
+    }
+    .hero p{
+      margin:0;
+      font-size:18px;
+      line-height:1.7;
+      color:rgba(255,255,255,.92);
+    }
+    .pill-row{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:18px;
+    }
+    .pill{
+      background:rgba(255,255,255,.16);
+      border:1px solid rgba(255,255,255,.22);
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:14px;
+      backdrop-filter:blur(8px);
+    }
+    .hero-card{
+      background:rgba(255,255,255,.14);
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:22px;
+      padding:18px 20px;
+      backdrop-filter:blur(8px);
+    }
+    .hero-card .formula{
+      font-size:34px;
+      font-weight:800;
+      text-align:center;
+      letter-spacing:.5px;
+      margin:6px 0 12px;
+    }
+    .hero-card .small{
+      color:rgba(255,255,255,.92);
+      font-size:15px;
+      line-height:1.7;
+    }
+    .grid{
+      margin-top:22px;
+      display:grid;
+      grid-template-columns:1.08fr .92fr;
+      gap:22px;
+      align-items:start;
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid rgba(124,58,237,.08);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .panel-header{
+      padding:18px 22px 14px;
+      border-bottom:1px solid rgba(124,58,237,.08);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .panel h2{
+      margin:0;
+      font-size:24px;
+    }
+    .caption{color:var(--muted);font-size:14px;line-height:1.6}
+    .timeline{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:10px;
+      padding:18px 22px 20px;
+    }
+    .step-chip{
+      border-radius:18px;
+      border:1px solid #e8ddff;
+      background:#faf7ff;
+      padding:10px 10px 12px;
+      cursor:pointer;
+      transition:.22s ease;
+      min-height:88px;
+    }
+    .step-chip:hover{transform:translateY(-2px); box-shadow:0 12px 24px rgba(124,58,237,.12)}
+    .step-chip.active{
+      background:linear-gradient(135deg,#7c3aed,#a855f7);
+      border-color:transparent;
+      color:#fff;
+    }
+    .step-chip .n{font-size:13px; opacity:.86; margin-bottom:6px}
+    .step-chip .t{font-size:17px; font-weight:800; line-height:1.26}
+    .step-chip .d{font-size:12px; margin-top:6px; color:inherit; opacity:.82}
+    .content{padding:0 22px 22px}
+    .statement{
+      padding:18px 20px;
+      border-radius:20px;
+      background:linear-gradient(180deg, #faf8ff, #f4f0ff);
+      border:1px solid #e9ddff;
+      margin-bottom:16px;
+    }
+    .statement .title{font-size:16px; color:var(--purple); font-weight:800; margin-bottom:10px}
+    .statement .formula{font-size:32px; font-weight:800; line-height:1.4; text-align:center; margin:4px 0 12px}
+    .state-meaning{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-bottom:16px;
+    }
+    .meaning-card{
+      background:#fff;
+      border:1px solid #ece7fb;
+      border-radius:18px;
+      padding:14px 16px;
+    }
+    .meaning-card h3{margin:0 0 8px; font-size:17px}
+    .meaning-card p{margin:0; color:var(--muted); line-height:1.7; font-size:15px}
+    .duo{
+      display:grid;
+      grid-template-columns:1.03fr .97fr;
+      gap:14px;
+      margin-bottom:16px;
+    }
+    .box{
+      border-radius:20px;
+      border:1px solid #ebe3ff;
+      padding:16px;
+      background:#fff;
+      min-height:260px;
+      max-height:620px;
+      overflow:auto;
+    }
+    .box h3{margin:0 0 12px; font-size:18px}
+    .derive-list,.pda-list{display:flex; flex-direction:column; gap:10px}
+    .derive-item,.pda-item{
+      border-radius:16px;
+      padding:12px 14px;
+      border:1px solid #ede6ff;
+      background:#faf9ff;
+      position:relative;
+      transition:.22s ease;
+      opacity:.42;
+    }
+    .derive-item.active,.pda-item.active{
+      opacity:1;
+      transform:scale(1.01);
+      background:#fff;
+      box-shadow:0 10px 24px rgba(124,58,237,.10);
+      border-color:#d9c6ff;
+    }
+    .derive-item .label,.pda-item .label{font-size:12px; color:var(--muted); margin-bottom:6px}
+    .derive-item .expr,.pda-item .expr{font-size:24px; font-weight:800; word-break:break-word}
+    .derive-item .hint,.pda-item .hint{margin-top:6px; color:var(--muted); font-size:14px; line-height:1.65}
+    .highlight{color:var(--red)}
+    .green{color:var(--green)}
+    .blue{color:var(--blue)}
+    .purple{color:var(--purple)}
+    .orange{color:var(--orange)}
+    .lm-tag{display:inline-block; margin-left:.12em; padding:.02em .38em; border-radius:999px; background:rgba(124,58,237,.10); color:var(--purple); font-size:.38em; font-weight:800; line-height:1.1; vertical-align:baseline; position:relative; top:.08em; letter-spacing:.02em}
+    .mapping{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:12px;
+    }
+    .map-card{
+      background:#fff;
+      border:1px solid #ede6ff;
+      border-radius:18px;
+      padding:14px 16px;
+      text-align:center;
+    }
+    .map-card .k{font-size:13px;color:var(--muted);margin-bottom:8px}
+    .map-card .v{font-size:26px;font-weight:800}
+    .notes{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:16px;
+    }
+    .note{
+      background:#fffaf0;
+      border:1px solid #fde7b1;
+      border-radius:18px;
+      padding:14px 16px;
+      line-height:1.72;
+      font-size:15px;
+    }
+    .note strong{color:#b45309}
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:16px;
+      align-items:center;
+    }
+    button{
+      border:none;
+      border-radius:14px;
+      padding:11px 16px;
+      font-size:15px;
+      font-weight:800;
+      cursor:pointer;
+      transition:.2s ease;
+    }
+    button:hover{transform:translateY(-1px)}
+    .btn-primary{background:linear-gradient(135deg,#7c3aed,#9333ea); color:#fff}
+    .btn-light{background:#f3ecff; color:#6d28d9}
+    .btn-accent{background:#eef6ff; color:#1d4ed8}
+    .mini-board{
+      padding:18px 22px 22px;
+    }
+    .proof-flow{
+      display:grid;
+      gap:12px;
+    }
+    .flow-step{
+      border-radius:20px;
+      padding:14px 16px;
+      background:#fbfbff;
+      border:1px solid #ebe6ff;
+      position:relative;
+      overflow:hidden;
+    }
+    .flow-step::before{
+      content:"";
+      position:absolute;
+      left:0; top:0; bottom:0; width:6px;
+      background:linear-gradient(180deg,#7c3aed,#c084fc);
+    }
+    .flow-step h4{margin:0 0 8px; font-size:17px}
+    .flow-step p{margin:0; color:var(--muted); line-height:1.75; font-size:15px}
+    .big-eq{
+      font-size:32px;
+      font-weight:800;
+      text-align:center;
+      line-height:1.55;
+      margin:12px 0;
+      color:#111827;
+    }
+    .footer-tip{
+      margin-top:16px;
+      border-radius:18px;
+      padding:14px 16px;
+      background:linear-gradient(90deg, #ecfeff, #eff6ff);
+      border:1px solid #cdeafe;
+      color:#0f172a;
+      line-height:1.75;
+      font-size:15px;
+    }
+    .progress-wrap{display:flex; align-items:center; gap:12px; color:var(--muted); font-size:14px}
+    .progress{
+      width:180px; height:10px; border-radius:999px; background:#f1ebff; overflow:hidden;
+    }
+    .bar{height:100%; width:0%; background:linear-gradient(90deg,#7c3aed,#a855f7); transition:.25s ease}
+    @media (max-width: 1160px){
+      .hero,.grid,.duo,.state-meaning,.mapping,.notes{grid-template-columns:1fr}
+      .timeline{grid-template-columns:repeat(3,1fr)}
+    }
+    @media (max-width: 760px){
+      .wrap{padding:14px}
+      .hero h1{font-size:30px}
+      .statement .formula,.big-eq{font-size:24px}
+      .derive-item .expr,.pda-item .expr,.map-card .v{font-size:20px}
+      .timeline{grid-template-columns:repeat(2,1fr)}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <h1>充分性证明：<br>为什么 <span style="color:#fde68a">最左派生</span> 一定能被 <span style="color:#bfdbfe">PDA</span> 模拟？</h1>
+        <p>这份演示把 PPT 第 13–20 页的证明拆成“对象定义 → 归纳基础 → 归纳递推 → 收尾得证”四层结构，并配上最左派生与栈变化的同步动画，帮助课堂上把“式子为什么这样写”讲清楚。</p>
+        <div class="pill-row">
+          <div class="pill">核心命题：S ⇒* w ⟹ (q,w,S) ⊢* (q,ε,ε)</div>
+          <div class="pill">证明方法：对派生步数 i 归纳</div>
+          <div class="pill">配套例子：S ⇒ AB ⇒ 0AB ⇒ 0B ⇒ 00B1 ⇒ 00011</div>
+        </div>
+      </div>
+      <div class="hero-card">
+        <div class="small">一句话直觉</div>
+        <div class="formula">“文法每做一步最左替换，PDA 就用一次 ε-转移改写栈顶；遇到终结符，再同步读入并弹栈。”</div>
+        <div class="small">所以：<strong>文法中的“左句型推进”</strong>，在 PDA 中对应为 <strong>输入剩余串 y<sub>i</sub></strong> 与 <strong>栈内容 A<sub>i</sub>α<sub>i</sub></strong> 的同步变化。</div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>证明导航</h2>
+            <div class="caption">点击任一步，右侧会同步更新讲解与例子。</div>
+          </div>
+          <div class="progress-wrap">
+            <span id="progressLabel">步骤 1 / 7</span>
+            <div class="progress"><div class="bar" id="bar"></div></div>
+          </div>
+        </div>
+        <div class="timeline" id="timeline"></div>
+        <div class="content">
+          <div class="statement">
+            <div class="title">当前讲解</div>
+            <div class="formula" id="mainFormula"></div>
+            <div class="caption" id="mainDesc"></div>
+          </div>
+
+          <div class="state-meaning">
+            <div class="meaning-card">
+              <h3>左句型记号</h3>
+              <p id="leftMeaning"></p>
+            </div>
+            <div class="meaning-card">
+              <h3>PDA 中对应 ID</h3>
+              <p id="pdaMeaning"></p>
+            </div>
+          </div>
+
+          <div class="duo">
+            <div class="box">
+              <h3>文法侧：最左派生</h3>
+              <div class="derive-list" id="deriveList"></div>
+            </div>
+            <div class="box">
+              <h3>PDA 侧：输入与栈的同步变化</h3>
+              <div class="pda-list" id="pdaList"></div>
+            </div>
+          </div>
+
+          <div class="mapping" id="mapping"></div>
+
+          <div class="notes" id="notes"></div>
+
+          <div class="controls">
+            <button class="btn-light" id="prevBtn">上一步</button>
+            <button class="btn-primary" id="playBtn">自动播放</button>
+            <button class="btn-accent" id="nextBtn">下一步</button>
+            <span class="caption">键盘 ← / → 也可切换步骤</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>证明骨架</h2>
+            <div class="caption">把 PPT 的多页公式压成一张“课堂板书图”。</div>
+          </div>
+        </div>
+        <div class="mini-board">
+          <div class="proof-flow">
+            <div class="flow-step">
+              <h4>① 先把第 i 个左句型统一写成 <span class="purple">x<sub>i</sub>A<sub>i</sub>α<sub>i</sub></span></h4>
+              <p>其中 <strong>x<sub>i</sub></strong> 是已经确定下来的终结符前缀，<strong>A<sub>i</sub></strong> 是当前最左变元，<strong>α<sub>i</sub></strong> 是它右边尚未处理的部分。对应地，把输入串写成 <strong>w = x<sub>i</sub>y<sub>i</sub></strong>。</p>
+            </div>
+            <div class="flow-step">
+              <h4>② 归纳命题</h4>
+              <div class="big-eq">S ⇒<sup>i</sup><span class="lm-tag">lm</span> x<sub>i</sub>A<sub>i</sub>α<sub>i</sub>,
+                &nbsp; w = x<sub>i</sub>y<sub>i</sub>
+                &nbsp;⟹&nbsp; (q,w,S) ⊢<sup>*</sup> (q,y<sub>i</sub>,A<sub>i</sub>α<sub>i</sub>)</div>
+            </div>
+            <div class="flow-step">
+              <h4>③ 递推的关键拆分</h4>
+              <p>若第 i+1 步把 <strong>A<sub>i</sub></strong> 替换成 <strong>β</strong>，且在 <strong>βα<sub>i</sub></strong> 中第一个变元是 <strong>A<sub>i+1</sub></strong>，那么可写成：</p>
+              <div class="big-eq">βα<sub>i</sub> = x′A<sub>i+1</sub>α<sub>i+1</sub>,
+                &nbsp; y<sub>i</sub> = x′y<sub>i+1</sub></div>
+              <p>这里的 <strong>x′</strong> 就是替换后，在下一个最左变元前面新增出来的终结符前缀。</p>
+            </div>
+            <div class="flow-step">
+              <h4>④ PDA 如何模拟这一步</h4>
+              <p>先用 ε-转移把栈顶 <strong>A<sub>i</sub></strong> 改成 <strong>β</strong>；然后把新出现的前缀 <strong>x′</strong> 逐个和输入匹配并弹出；于是就从 <strong>(q,y<sub>i</sub>,A<sub>i</sub>α<sub>i</sub>)</strong> 到达 <strong>(q,y<sub>i+1</sub>,A<sub>i+1</sub>α<sub>i+1</sub>)</strong>。</p>
+            </div>
+            <div class="flow-step">
+              <h4>⑤ 收尾</h4>
+              <p>当到达第 n 个左句型时，已经是完整串 <strong>w</strong>，于是 <strong>x<sub>n</sub>=w, A<sub>n</sub>=ε, α<sub>n</sub>=ε</strong>。这恰好对应 PDA 的终点 <strong>(q,ε,ε)</strong>，所以充分性成立。</p>
+            </div>
+          </div>
+          <div class="footer-tip">
+            <strong>课堂上可重点强调：</strong> 这个证明不是直接归纳“字符串 w 的长度”，而是归纳“<strong>最左派生做了多少步</strong>”。因为 PDA 的 ε-替换动作，本质上就是在模仿“把当前最左变元换成产生式右部”。
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const derivation = [
+      {label:'第 0 个左句型', expr:'S', hint:'起点：把 S 看成第 0 个左句型。'},
+      {label:'第 1 步', expr:'AB', hint:'对 S 应用产生式 S → AB。'},
+      {label:'第 2 步', expr:'0AB', hint:'最左变元 A 用 A → 0A 替换。'},
+      {label:'第 3 步', expr:'0B', hint:'最左变元 A 用 A → ε 消去。'},
+      {label:'第 4 步', expr:'00B1', hint:'最左变元 B 第一次用 B → 0B1 替换。'},
+      {label:'第 5 步', expr:'000B11', hint:'最左变元 B 第二次用 B → 0B1 替换。'},
+      {label:'第 6 步', expr:'00011', hint:'最后把 B 用 B → ε 消去，得到完整串 w。'}
+    ];
+
+    const pdaStates = [
+      {label:'初始 ID', expr:'(q, 00011, S)', hint:'输入还未消耗，栈顶只有开始符号 S。'},
+      {label:'ε-替换 S', expr:'(q, 00011, AB)', hint:'用 ε-转移把栈顶 S 改写成 AB。'},
+      {label:'ε-替换 A', expr:'(q, 00011, 0AB)', hint:'继续用 ε-转移，把栈顶 A 改写成 0A。'},
+      {label:'匹配第 1 个 0', expr:'(q, 0011, AB)', hint:'栈顶 0 与输入首符号 0 匹配，同步读入并弹栈。'},
+      {label:'ε-消去 A', expr:'(q, 0011, B)', hint:'A → ε 对应 ε-转移，直接弹出 A。'},
+      {label:'ε-替换 B', expr:'(q, 0011, 0B1)', hint:'第一次把 B 改写成 0B1。'},
+      {label:'匹配第 2 个 0', expr:'(q, 011, B1)', hint:'再次读入 0，并把栈顶 0 弹出。'},
+      {label:'再次 ε-替换 B', expr:'(q, 011, 0B11)', hint:'对当前最左变元 B 再做一次 B → 0B1。'},
+      {label:'匹配第 3 个 0', expr:'(q, 11, B11)', hint:'把新出现的前缀 0 与输入同步消耗掉。'},
+      {label:'ε-消去 B', expr:'(q, 11, 11)', hint:'最后令 B → ε，栈里只剩两个终结符 1。'},
+      {label:'匹配第 1 个 1', expr:'(q, 1, 1)', hint:'读入一个 1，同时弹出一个 1。'},
+      {label:'匹配第 2 个 1 / 接受', expr:'(q, ε, ε)', hint:'最后一个 1 匹配后，输入空、栈空，接受。'}
+    ];
+
+    const steps = [
+      {
+        short:'命题与记号',
+        desc:'先把“第 i 个左句型”和“PDA 的当前 ID”配对起来。',
+        formula:'S ⇒<sup>*</sup><span class="lm-tag">lm</span> w &nbsp;⟹&nbsp; (q,w,S) ⊢<sup>*</sup> (q,ε,ε)',
+        detail:'证明目标是：只要文法能最左派生出 w，那么按构造得到的 PDA 就一定能把输入 w 处理到“输入空 + 栈空”。',
+        leftMeaning:'设第 i 个左句型为 <strong>x<sub>i</sub>A<sub>i</sub>α<sub>i</sub></strong>。其中：x<sub>i</sub> 是已经稳定下来的终结符前缀，A<sub>i</sub> 是当前最左变元，α<sub>i</sub> 是其余尚未处理部分。',
+        pdaMeaning:'把输入写成 <strong>w = x<sub>i</sub>y<sub>i</sub></strong>。对应的 PDA ID 是 <strong>(q,y<sub>i</sub>,A<sub>i</sub>α<sub>i</sub>)</strong>：输入剩余 y<sub>i</sub>，栈顶从 A<sub>i</sub> 开始。',
+        maps:[
+          ['第 0 个左句型','x<sub>0</sub>=ε, A<sub>0</sub>=S, α<sub>0</sub>=ε'],
+          ['最终左句型','x<sub>n</sub>=w, A<sub>n</sub>=ε, α<sub>n</sub>=ε'],
+          ['归纳方向','从 i 推到 i+1']
+        ],
+        notes:[
+          '这一步对应 PPT 14 页：先把 <strong>S</strong> 与 <strong>w</strong> 统一纳入同一个“第 i 个左句型”框架。',
+          '重点是让学生看懂：<strong>文法侧的前缀 x<sub>i</sub></strong>，会在 PDA 侧变成“已经被读掉”的那一部分。'
+        ],
+        activeDerive:0,
+        activePda:0
+      },
+      {
+        short:'归纳命题',
+        desc:'真正要归纳的是“派生走了 i 步”时，PDA 已能同步到哪里。',
+        formula:'S ⇒<sup>i</sup><span class="lm-tag">lm</span> x<sub>i</sub>A<sub>i</sub>α<sub>i</sub>, &nbsp; w = x<sub>i</sub>y<sub>i</sub> &nbsp;⟹&nbsp; (q,w,S) ⊢<sup>*</sup> (q,y<sub>i</sub>,A<sub>i</sub>α<sub>i</sub>)',
+        detail:'这就是整个充分性证明的核心不变量：文法做了 i 步最左派生，PDA 就能走到“剩余输入 y<sub>i</sub> + 栈内容 A<sub>i</sub>α<sub>i</sub>”这个状态。',
+        leftMeaning:'左句型里最左变元 <strong>A<sub>i</sub></strong> 还没展开，所以文法之后的工作，都从它开始继续。',
+        pdaMeaning:'栈顶正是 <strong>A<sub>i</sub></strong>，PDA 后续也从它开始决定下一次 ε-替换或终结符匹配。',
+        maps:[
+          ['文法做了什么','派生到 x<sub>i</sub>A<sub>i</sub>α<sub>i</sub>'],
+          ['PDA做了什么','消耗了 x<sub>i</sub>，栈停在 A<sub>i</sub>α<sub>i</sub>'],
+          ['为什么能配对','都把“未完成部分”留在 A<sub>i</sub>α<sub>i</sub>']
+        ],
+        notes:[
+          '<strong>x<sub>i</sub></strong> 不是随便写的，它专门表示“已经完成匹配”的前缀。',
+          '这也是课堂上最容易卡住的地方：<strong>输入剩余串 y<sub>i</sub></strong> 与 <strong>栈中的未展开部分</strong> 是同步定义出来的。'
+        ],
+        activeDerive:4,
+        activePda:7
+      },
+      {
+        short:'归纳基础',
+        desc:'当最左派生 0 步时，一切都还停在起点。',
+        formula:'i = 0: \; (q,w,S) ⊢<sup>*</sup> (q,y<sub>0</sub>,A<sub>0</sub>α<sub>0</sub>) = (q,w,S)',
+        detail:'因为第 0 个左句型就是 S，本来就有 x<sub>0</sub>=ε, A<sub>0</sub>=S, α<sub>0</sub>=ε，所以 y<sub>0</sub>=w，PDA 什么都不用做。',
+        leftMeaning:'文法侧还没有开始替换，所以左句型就是 <strong>S</strong>。',
+        pdaMeaning:'PDA 也还没有开始移动，所以 ID 仍然是 <strong>(q,w,S)</strong>。',
+        maps:[
+          ['x<sub>0</sub>','ε'],
+          ['A<sub>0</sub>','S'],
+          ['y<sub>0</sub>','w']
+        ],
+        notes:[
+          '这一步就是 PPT 15 页的黄框内容。',
+          '它看起来“显然”，但必须说清：归纳基础不是说接受完成，而是说 <strong>归纳命题在 i=0 时成立</strong>。'
+        ],
+        activeDerive:0,
+        activePda:0
+      },
+      {
+        short:'递推起点',
+        desc:'假设第 i 步成立，分析第 i+1 步会发生什么。',
+        formula:'x<sub>i</sub>A<sub>i</sub>α<sub>i</sub> ⇒<span class="lm-tag">lm</span> x<sub>i</sub>βα<sub>i</sub> = x<sub>i+1</sub>A<sub>i+1</sub>α<sub>i+1</sub>',
+        detail:'第 i+1 步一定是把当前最左变元 A<sub>i</sub> 用某个产生式 <strong>A<sub>i</sub> → β</strong> 替换。因为是最左派生，所以动的只能是 A<sub>i</sub>。',
+        leftMeaning:'替换后，新串里会出现新的最左变元 <strong>A<sub>i+1</sub></strong>。它一定藏在 <strong>βα<sub>i</sub></strong> 中。',
+        pdaMeaning:'PDA 先做与文法同源的动作：用 ε-转移把栈顶 A<sub>i</sub> 改写成 β。',
+        maps:[
+          ['旧最左变元','A<sub>i</sub>'],
+          ['产生式','A<sub>i</sub> → β'],
+          ['新最左变元','A<sub>i+1</sub> ∈ βα<sub>i</sub>']
+        ],
+        notes:[
+          '对应 PPT 16–17 页。',
+          '这里最适合提醒学生：<strong>最左派生</strong> 与 <strong>PDA 总看栈顶</strong> 是严格对齐的。'
+        ],
+        activeDerive:2,
+        activePda:2
+      },
+      {
+        short:'拆出 x′',
+        desc:'把 β α_i 写成“终结符前缀 x′ + 下一个最左变元 + 其余部分”。',
+        formula:'βα<sub>i</sub> = x′A<sub>i+1</sub>α<sub>i+1</sub>，并且 x<sub>i+1</sub> = x<sub>i</sub>x′',
+        detail:'因为 A<sub>i+1</sub> 是替换后串中的第一个变元，所以它前面只能有终结符，记成 x′。于是 x′ 恰好就是“这一步新增的终结符前缀”。',
+        leftMeaning:'这一步把第 i+1 个左句型写成标准形：<strong>x<sub>i+1</sub>A<sub>i+1</sub>α<sub>i+1</sub></strong>。',
+        pdaMeaning:'PDA 在栈中也会出现同样的前缀 x′：先把栈顶改写成 β，再逐个弹出前面的终结符 x′。',
+        maps:[
+          ['新增前缀','x′'],
+          ['新左句型','x<sub>i</sub>x′A<sub>i+1</sub>α<sub>i+1</sub>'],
+          ['栈中变化','A<sub>i</sub>α<sub>i</sub> → β α<sub>i</sub>']
+        ],
+        notes:[
+          '对应 PPT 18 页。',
+          '“为什么能拆成 x′A<sub>i+1</sub>α<sub>i+1</sub>”是课堂常见提问：答案就是 <strong>A<sub>i+1</sub></strong> 被定义为替换后串里的第一个变元。'
+        ],
+        activeDerive:3,
+        activePda:4
+      },
+      {
+        short:'同步输入',
+        desc:'既然 w = x_i y_i = x_i x′ y_{i+1}，就有 y_i = x′ y_{i+1}。',
+        formula:'w = x<sub>i</sub>y<sub>i</sub> = x<sub>i</sub>x′y<sub>i+1</sub> = x<sub>i+1</sub>y<sub>i+1</sub> ⟹ y<sub>i</sub> = x′y<sub>i+1</sub>',
+        detail:'这意味着：PDA 在改写完栈顶之后，正好可以把前缀 x′ 与输入首部逐个匹配掉。匹配完以后，输入剩余就是 y<sub>i+1</sub>。',
+        leftMeaning:'文法新增出来的终结符前缀 x′，在最终串 w 里必然就落在当前位置。',
+        pdaMeaning:'PDA 先把栈顶改写成 β，再把前缀 x′ 逐个与输入同步匹配掉，因此会从 <strong>(q,y<sub>i</sub>,β α<sub>i</sub>)</strong> 走到 <strong>(q,y<sub>i+1</sub>,A<sub>i+1</sub>α<sub>i+1</sub>)</strong>。例子里对应为：写出 0B1、读掉 0、再写出 0B11、再读掉 0。',
+        maps:[
+          ['输入剩余','y<sub>i</sub> = x′ y<sub>i+1</sub>'],
+          ['栈剩余','β α<sub>i</sub> = x′ A<sub>i+1</sub> α<sub>i+1</sub>'],
+          ['同步效果','读掉 x′ 后两边同时前进']
+        ],
+        notes:[
+          '对应 PPT 19 页。',
+          '这一步一旦讲通，学生就会明白：<strong>文法中出现的新终结符</strong>，为什么能在 PDA 中立刻被读掉。'
+        ],
+        activeDerive:5,
+        activePda:8
+      },
+      {
+        short:'收尾得证',
+        desc:'把递推链一直推到第 n 个左句型，也就是完整串 w。',
+        formula:'S ⇒<sup>n</sup><span class="lm-tag">lm</span> w ⟹ (q,w,S) ⊢<sup>*</sup> (q,y<sub>n</sub>,A<sub>n</sub>α<sub>n</sub>) = (q,ε,ε)',
+        detail:'因为最终左句型就是 w，所以 x<sub>n</sub>=w，A<sub>n</sub>=ε，α<sub>n</sub>=ε，进而 y<sub>n</sub>=ε。于是 PDA 真的走到了接受形态，充分性成立。',
+        leftMeaning:'第 n 个左句型已经没有变元了，整个串就是 <strong>w</strong>。',
+        pdaMeaning:'这正对应 PDA 的结束状态：<strong>输入空、栈空</strong>。',
+        maps:[
+          ['x<sub>n</sub>','w'],
+          ['A<sub>n</sub>, α<sub>n</sub>','ε, ε'],
+          ['最终 ID','(q,ε,ε)']
+        ],
+        notes:[
+          '对应 PPT 20 页。',
+          '收尾时可再强调一次：证明之所以成立，依赖的是 <strong>“最左变元” 与 “栈顶符号” 的一一对应</strong>。'
+        ],
+        activeDerive:6,
+        activePda:11
+      }
+    ];
+
+    const timeline = document.getElementById('timeline');
+    const mainFormula = document.getElementById('mainFormula');
+    const mainDesc = document.getElementById('mainDesc');
+    const leftMeaning = document.getElementById('leftMeaning');
+    const pdaMeaning = document.getElementById('pdaMeaning');
+    const deriveList = document.getElementById('deriveList');
+    const pdaList = document.getElementById('pdaList');
+    const mapping = document.getElementById('mapping');
+    const notes = document.getElementById('notes');
+    const progressLabel = document.getElementById('progressLabel');
+    const bar = document.getElementById('bar');
+
+    let index = 0;
+    let timer = null;
+
+    function renderStaticLists(activeDerive, activePda){
+      deriveList.innerHTML = derivation.map((item, i) => `
+        <div class="derive-item ${i<=activeDerive?'active':''}">
+          <div class="label">${item.label}</div>
+          <div class="expr">${item.expr}</div>
+          <div class="hint">${item.hint}</div>
+        </div>
+      `).join('');
+
+      pdaList.innerHTML = pdaStates.map((item, i) => `
+        <div class="pda-item ${i<=activePda?'active':''}">
+          <div class="label">${item.label}</div>
+          <div class="expr">${item.expr}</div>
+          <div class="hint">${item.hint}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderStep(i){
+      const s = steps[i];
+      index = i;
+      mainFormula.innerHTML = s.formula;
+      mainDesc.innerHTML = s.detail;
+      leftMeaning.innerHTML = s.leftMeaning;
+      pdaMeaning.innerHTML = s.pdaMeaning;
+      mapping.innerHTML = s.maps.map(([k,v]) => `
+        <div class="map-card"><div class="k">${k}</div><div class="v">${v}</div></div>
+      `).join('');
+      notes.innerHTML = s.notes.map(n => `<div class="note">${n}</div>`).join('');
+      renderStaticLists(s.activeDerive, s.activePda);
+
+      [...timeline.children].forEach((el, idx) => el.classList.toggle('active', idx===i));
+      progressLabel.textContent = `步骤 ${i+1} / ${steps.length}`;
+      bar.style.width = `${(i+1)/steps.length*100}%`;
+    }
+
+    steps.forEach((step, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'step-chip';
+      chip.innerHTML = `<div class="n">STEP ${i+1}</div><div class="t">${step.short}</div><div class="d">${step.desc}</div>`;
+      chip.addEventListener('click', () => {
+        stopPlay();
+        renderStep(i);
+      });
+      timeline.appendChild(chip);
+    });
+
+    function next(){ renderStep((index + 1) % steps.length); }
+    function prev(){ renderStep((index - 1 + steps.length) % steps.length); }
+
+    function stopPlay(){
+      if(timer){ clearInterval(timer); timer = null; }
+      document.getElementById('playBtn').textContent = '自动播放';
+    }
+
+    function togglePlay(){
+      if(timer){ stopPlay(); return; }
+      document.getElementById('playBtn').textContent = '停止播放';
+      timer = setInterval(() => {
+        if(index === steps.length - 1){ stopPlay(); return; }
+        renderStep(index + 1);
+      }, 2600);
+    }
+
+    document.getElementById('nextBtn').addEventListener('click', () => { stopPlay(); next(); });
+    document.getElementById('prevBtn').addEventListener('click', () => { stopPlay(); prev(); });
+    document.getElementById('playBtn').addEventListener('click', togglePlay);
+
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'ArrowRight'){
+        e.preventDefault();
+        stopPlay();
+        next();
+      } else if(e.key === 'ArrowLeft'){
+        e.preventDefault();
+        stopPlay();
+        prev();
+      }
+    });
+
+    renderStep(0);
+  </script>
+</body>
+</html>

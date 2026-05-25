@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>逆同态封闭性 Demo</title>
+  <style>
+    :root{
+      --bg:#f7f3fb;
+      --panel:#ffffff;
+      --ink:#1f1630;
+      --muted:#6d6480;
+      --pri:#7b2cbf;
+      --pri2:#b5179e;
+      --line:#d9caeb;
+      --ok:#16803c;
+      --warn:#b65d00;
+      --bad:#b42318;
+      --soft:#efe6fa;
+      --blue:#3b82f6;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+      color:var(--ink);
+      background:linear-gradient(180deg,#fbf8ff 0%,#f5f0fb 100%);
+    }
+    .wrap{max-width:1400px;margin:0 auto;padding:22px}
+    .hero{
+      background:linear-gradient(135deg,#fff 0%,#f8f2ff 50%,#f7effc 100%);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:22px 24px;
+      box-shadow:0 12px 30px rgba(123,44,191,.08);
+    }
+    h1{margin:0 0 8px;font-size:34px;line-height:1.15}
+    .sub{color:var(--muted);font-size:16px;line-height:1.7}
+    .formula{
+      margin-top:14px;
+      background:var(--soft);
+      border-left:6px solid var(--pri);
+      padding:14px 18px;
+      border-radius:14px;
+      font-size:28px;
+      font-weight:700;
+      overflow-x:auto;
+      white-space:nowrap;
+    }
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;margin-top:18px}
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:18px;
+      box-shadow:0 8px 20px rgba(31,22,48,.05);
+    }
+    .card h2{margin:0 0 14px;font-size:22px}
+    .small{font-size:14px;color:var(--muted);line-height:1.7}
+    .section-title{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .dot{width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--pri2))}
+    label{display:block;font-weight:700;margin:10px 0 6px}
+    input,select,button{
+      font:inherit;
+      border-radius:12px;
+      border:1px solid #ccb7e5;
+      padding:10px 12px;
+      background:#fff;
+      color:var(--ink);
+    }
+    input[type="text"]{width:100%}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .row > *{flex:1}
+    button{
+      cursor:pointer;
+      background:linear-gradient(135deg,var(--pri),var(--pri2));
+      color:#fff;
+      border:none;
+      font-weight:700;
+      box-shadow:0 6px 14px rgba(123,44,191,.22);
+      transition:.2s transform ease,.2s opacity ease;
+    }
+    button.secondary{background:#fff;color:var(--pri);border:1px solid #ccb7e5;box-shadow:none}
+    button:hover{transform:translateY(-1px)}
+    button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:999px;background:#f5effd;border:1px solid #e4d6f7;
+      font-size:14px;margin-right:8px;margin-bottom:8px
+    }
+    .state-pill{display:inline-block;padding:7px 12px;border-radius:999px;background:#f7f4fe;border:1px solid #d9caeb;font-weight:700}
+    .state-pill.accept{background:#ecfdf3;border-color:#a6f4c5;color:var(--ok)}
+    .state-pill.reject{background:#fff1f2;border-color:#fecdd3;color:var(--bad)}
+    .scene{
+      position:relative;
+      min-height:760px;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 10% 10%,rgba(181,23,158,.08),transparent 25%),
+        radial-gradient(circle at 90% 10%,rgba(59,130,246,.08),transparent 25%),
+        linear-gradient(180deg,#fff 0%,#faf6ff 100%);
+    }
+    .scene-title{font-size:24px;margin:0 0 10px}
+    .proof-box{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:14px;
+      align-items:start;
+    }
+    .tape-label{font-weight:800;font-size:20px;margin:6px 0 10px}
+    .tape{display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-height:56px}
+    .cell{
+      width:48px;height:48px;border:2px solid #3b3350;border-radius:6px;background:#fff;
+      display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;
+      position:relative;transition:.25s ease all;
+    }
+    .cell.blank{color:#b9adc9;border-style:dashed}
+    .cell.active{background:#efe6fa;border-color:var(--pri);transform:translateY(-2px);box-shadow:0 6px 14px rgba(123,44,191,.18)}
+    .cell.done{background:#eefaf2;border-color:#4caf74}
+    .cell::after{
+      content: attr(data-index);
+      position:absolute;bottom:-24px;left:50%;transform:translateX(-50%);
+      font-size:12px;color:#8c81a0;font-weight:600;
+    }
+    .machine-area{position:relative;margin-top:52px;padding-top:10px}
+    .arrow-stack{
+      position:absolute;left:56px;top:-8px;width:460px;height:120px;pointer-events:none;
+    }
+    .machineB{
+      position:relative;
+      width:700px;max-width:100%;
+      border:4px solid #1c1c1c;border-radius:30px;background:#fff;
+      padding:28px 26px 28px 26px;min-height:360px;
+      box-shadow:0 12px 30px rgba(31,22,48,.06);
+    }
+    .machineB .labelB{position:absolute;right:40px;top:120px;font-size:44px;font-style:italic;color:#5f4c7e}
+    .buffer{
+      position:relative;
+      width:max-content;max-width:100%;
+      margin:0 auto 28px;
+      padding:16px 16px 26px;
+      border:3px solid #7a7a7a;border-radius:12px;background:#fafafa;
+    }
+    .buffer-title{position:absolute;left:12px;top:-13px;background:#fafafa;padding:0 8px;color:#555;font-weight:700}
+    .buffer-track{display:flex;gap:4px;min-height:54px;align-items:center;flex-wrap:wrap}
+    .mini{width:42px;height:42px;font-size:22px}
+    .machineA{
+      width:340px;max-width:100%;border:4px solid #1c1c1c;border-radius:24px;background:#fdfdfd;
+      padding:18px 18px 50px;position:relative;margin-left:60px;
+    }
+    .machineA .labelA{position:absolute;right:24px;bottom:20px;font-size:44px;font-style:italic;color:#5f4c7e}
+    .a-head{
+      position:absolute;left:50%;top:-38px;transform:translateX(-50%);font-size:30px;color:#1c1c1c;font-weight:900
+    }
+    .a-state{
+      margin-top:40px;width:132px;height:86px;border:4px solid #1c1c1c;border-radius:26px;background:#fff;
+      display:flex;align-items:center;justify-content:center;font-size:40px;font-style:italic;margin-left:18px;
+      box-shadow:0 8px 18px rgba(31,22,48,.06)
+    }
+    .a-state.accept{background:#ecfdf3}
+    .a-state.reject{background:#fff3f3}
+    .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .legend .item{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+    .swatch{width:18px;height:18px;border-radius:4px;border:2px solid #3b3350;background:#fff}
+    .swatch.active{background:#efe6fa;border-color:var(--pri)}
+    .swatch.done{background:#eefaf2;border-color:#4caf74}
+    .swatch.buffer{background:#eef4ff;border-color:#3b82f6}
+    .status{
+      display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;
+    }
+    .metric{padding:14px;border-radius:16px;background:#faf7fe;border:1px solid #e7daf7}
+    .metric .k{font-size:13px;color:var(--muted);margin-bottom:6px}
+    .metric .v{font-size:20px;font-weight:800;word-break:break-word}
+    .explain{margin-top:14px;padding:14px;border-radius:16px;background:#fff9ee;border:1px solid #f1d6a8;line-height:1.8}
+    .steps{margin:0;padding-left:22px;line-height:1.9}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}
+    th,td{border:1px solid #dbcdf0;padding:10px;text-align:center}
+    th{background:#f7f1fd}
+    td.highlight{background:#fff4df}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    .footer-note{margin-top:16px;padding:14px 16px;border-radius:16px;background:#f3f8ff;border:1px solid #cfe1ff;line-height:1.8}
+    .proof-line{font-size:18px;line-height:1.9}
+    .math-card{padding:14px 16px;border-radius:16px;background:#fbf8ff;border:1px solid #e4d6f7;margin-top:14px}
+    .badge{display:inline-block;padding:5px 10px;border-radius:999px;background:#eee6fb;color:var(--pri);font-weight:800;font-size:13px}
+    .center{display:flex;justify-content:center;align-items:center}
+    .hidden{display:none}
+    @media (max-width: 1080px){
+      .grid{grid-template-columns:1fr}
+      .proof-box{grid-template-columns:1fr}
+      .scene{min-height:auto}
+      .status{grid-template-columns:1fr}
+      h1{font-size:28px}
+      .formula{font-size:24px}
+      .cell{width:42px;height:42px;font-size:22px}
+      .mini{width:36px;height:36px;font-size:18px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>逆同态封闭性 Demo</h1>
+      <div class="sub">
+        目标：把“由识别 <span class="mono">L</span> 的 DFA <span class="mono">A</span> 构造识别 <span class="mono">h<sup>-1</sup>(L)</span> 的 DFA <span class="mono">B</span>”这个证明过程做成可视化。<br>
+        核心思想：<b>B 读入一个源字母，等价于 A 一次读入这个字母经同态映射后的一个字符串</b>。
+      </div>
+      <div class="formula">δ′(q, a) = δ̂(q, h(a)) &nbsp;&nbsp;&nbsp; 且 &nbsp;&nbsp;&nbsp; x ∈ h<sup>-1</sup>(L) ⇔ h(x) ∈ L</div>
+    </section>
+
+    <div class="grid">
+      <aside class="card">
+        <div class="section-title"><span class="dot"></span><h2>1. 参数设置</h2></div>
+        <div class="small">这里固定一个很适合课堂演示的例子：</div>
+        <div class="chip">Γ = {0,1}</div>
+        <div class="chip">Σ = {a,b}</div>
+        <div class="chip">A 识别：二进制串中 <b>1 的个数为偶数</b></div>
+        <div class="chip">q<sub>0</sub> 为开始且接受状态</div>
+        <div class="chip">q<sub>1</sub> 为非接受状态</div>
+
+        <label>同态 h(a)</label>
+        <input id="ha" type="text" value="01" maxlength="6" />
+
+        <label>同态 h(b)</label>
+        <input id="hb" type="text" value="1" maxlength="6" />
+
+        <label>输入源串 x（字母表 Σ={a,b}）</label>
+        <input id="inputX" type="text" value="abba" maxlength="16" />
+
+        <div class="row" style="margin-top:14px">
+          <button id="buildBtn">生成并重置</button>
+          <button id="stepBtn" class="secondary">单步演示</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button id="playBtn">自动播放</button>
+          <button id="pauseBtn" class="secondary">暂停</button>
+        </div>
+
+        <div class="math-card">
+          <div class="badge">教学提示</div>
+          <ul class="steps">
+            <li>先让学生盯住“B 的一个输入字符，会被翻成 A 的一段输入串”。</li>
+            <li>再强调：B 不需要真的把整台 A 放进去，这是一个构造思想。</li>
+            <li>最后落到公式：<span class="mono">δ′(q,a)=δ̂(q,h(a))</span>。</li>
+          </ul>
+        </div>
+
+        <div class="footer-note">
+          <b>当前例子里 A 的转移：</b><br>
+          <span class="mono">δ(q0,0)=q0, δ(q0,1)=q1</span><br>
+          <span class="mono">δ(q1,0)=q1, δ(q1,1)=q0</span><br>
+          所以 <span class="mono">δ̂(q, w)</span> 只取决于 <span class="mono">w</span> 中 <span class="mono">1</span> 的奇偶性。
+        </div>
+      </aside>
+
+      <main class="card scene">
+        <div class="section-title"><span class="dot"></span><h2 class="scene-title">2. 证明过程可视化</h2></div>
+        <div class="proof-box">
+          <div>
+            <div class="tape-label">Σ 上字符串 <span class="mono">x</span></div>
+            <div id="sourceTape" class="tape"></div>
+
+            <div class="machine-area">
+              <svg class="arrow-stack" viewBox="0 0 460 120">
+                <defs>
+                  <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                    <polygon points="0 0, 8 4, 0 8" fill="#3b82f6"></polygon>
+                  </marker>
+                </defs>
+                <path d="M24 12 C80 60, 120 60, 165 90" fill="none" stroke="#9ab7ff" stroke-width="3" marker-end="url(#arrowHead)"/>
+                <path d="M84 12 C125 40, 150 42, 196 90" fill="none" stroke="#b7caff" stroke-width="3" marker-end="url(#arrowHead)"/>
+                <path d="M180 12 C250 18, 275 30, 280 74" fill="none" stroke="#93b1ff" stroke-width="3" marker-end="url(#arrowHead)"/>
+              </svg>
+
+              <div class="machineB">
+                <div class="labelB">B</div>
+                <div class="buffer">
+                  <div class="buffer-title">B 控制器中的缓冲区（当前装载 h(a) 或 h(b)）</div>
+                  <div id="bufferTape" class="buffer-track"></div>
+                </div>
+
+                <div class="machineA">
+                  <div class="a-head">↑</div>
+                  <div id="aStateBox" class="a-state">q<sub>0</sub></div>
+                  <div class="labelA">A</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="legend">
+              <div class="item"><span class="swatch active"></span>当前正在处理</div>
+              <div class="item"><span class="swatch done"></span>已处理完成</div>
+              <div class="item"><span class="swatch buffer"></span>当前缓冲区输入</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="metric">
+              <div class="k">当前证明叙述</div>
+              <div id="narration" class="v" style="font-size:18px;line-height:1.7">点击“生成并重置”开始。</div>
+            </div>
+
+            <div class="status">
+              <div class="metric">
+                <div class="k">当前 B 读到的字符</div>
+                <div id="currentSigma" class="v mono">—</div>
+              </div>
+              <div class="metric">
+                <div class="k">当前缓冲区字符串</div>
+                <div id="currentGamma" class="v mono">—</div>
+              </div>
+              <div class="metric">
+                <div class="k">A 的当前状态</div>
+                <div id="currentState" class="v">q<sub>0</sub></div>
+              </div>
+              <div class="metric">
+                <div class="k">已展开的 h(x)</div>
+                <div id="expandedHX" class="v mono">ε</div>
+              </div>
+            </div>
+
+            <div class="explain">
+              <div class="proof-line"><b>构造：</b>若 <span class="mono">A=(Q,Γ,δ,q<sub>0</sub>,F)</span> 识别 <span class="mono">L</span>，则构造</div>
+              <div class="proof-line center" style="font-size:30px;font-weight:800;margin:8px 0">B = (Q, Σ, δ′, q<sub>0</sub>, F)</div>
+              <div class="proof-line">也就是说：<b>B 与 A 共享同一批状态、同一起始状态、同一接受状态集</b>，只改转移函数。</div>
+            </div>
+
+            <div class="metric" style="margin-top:14px">
+              <div class="k">当前一步对应的公式</div>
+              <div id="stepFormula" class="v mono" style="font-size:18px;line-height:1.8">δ′(q, a) = δ̂(q, h(a))</div>
+            </div>
+
+            <div class="metric" style="margin-top:14px">
+              <div class="k">自动构造出的 B 的转移表</div>
+              <table>
+                <thead>
+                  <tr><th>状态 q</th><th>δ′(q,a)</th><th>δ′(q,b)</th></tr>
+                </thead>
+                <tbody id="bTable"></tbody>
+              </table>
+            </div>
+
+            <div class="metric" style="margin-top:14px">
+              <div class="k">最终结论</div>
+              <div id="finalConclusion" class="v" style="font-size:18px;line-height:1.8">等待演示结束。</div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const el = id => document.getElementById(id);
+
+    const stateNames = ["q0", "q1"];
+    const accepting = new Set(["q0"]);
+    const delta = {
+      q0: { '0': 'q0', '1': 'q1' },
+      q1: { '0': 'q1', '1': 'q0' }
+    };
+
+    let sigmaInput = [];
+    let mapping = { a: "01", b: "1" };
+    let sourceIndex = 0;
+    let bufferIndex = -1;
+    let currentBuffer = [];
+    let currentSigmaChar = null;
+    let aState = 'q0';
+    let expanded = '';
+    let mode = 'idle'; // idle | sourceStart | bufferStep | finished
+    let interval = null;
+
+    function sanitizeGamma(s){
+      return (s || '').replace(/[^01]/g, '');
+    }
+
+    function sanitizeSigma(s){
+      return (s || '').replace(/[^ab]/g, '');
+    }
+
+    function deltaHat(q, w){
+      let cur = q;
+      for(const ch of w){
+        cur = delta[cur][ch];
+      }
+      return cur;
+    }
+
+    function stateHTML(q){
+      const accept = accepting.has(q);
+      return `<span class="state-pill ${accept ? 'accept' : 'reject'}">${q}${accept ? '（接受）' : '（非接受）'}</span>`;
+    }
+
+    function renderSourceTape(){
+      const tape = el('sourceTape');
+      tape.innerHTML = '';
+      if(sigmaInput.length === 0){
+        tape.innerHTML = '<div class="cell blank" data-index="0">ε</div>';
+        return;
+      }
+      sigmaInput.forEach((ch, idx) => {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        if(idx < sourceIndex) div.classList.add('done');
+        if(idx === sourceIndex && mode !== 'finished' && mode !== 'idle') div.classList.add('active');
+        div.dataset.index = idx;
+        div.textContent = ch;
+        tape.appendChild(div);
+      });
+    }
+
+    function renderBuffer(){
+      const tape = el('bufferTape');
+      tape.innerHTML = '';
+      const arr = currentBuffer.length ? currentBuffer : ['ε'];
+      arr.forEach((ch, idx) => {
+        const div = document.createElement('div');
+        div.className = 'cell mini';
+        div.dataset.index = idx;
+        div.textContent = ch;
+        if(currentBuffer.length === 0) div.classList.add('blank');
+        if(idx < bufferIndex) div.classList.add('done');
+        if(idx === bufferIndex && mode === 'bufferStep') div.classList.add('active');
+        tape.appendChild(div);
+      });
+    }
+
+    function renderAState(){
+      const box = el('aStateBox');
+      box.className = 'a-state ' + (accepting.has(aState) ? 'accept' : 'reject');
+      box.innerHTML = aState.replace('q','q<sub>') + '</sub>';
+      el('currentState').innerHTML = stateHTML(aState);
+    }
+
+    function buildBTable(){
+      const tbody = el('bTable');
+      tbody.innerHTML = '';
+      for(const q of stateNames){
+        const qa = deltaHat(q, mapping.a);
+        const qb = deltaHat(q, mapping.b);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono">${q}</td>
+          <td class="mono">δ̂(${q},${mapping.a || 'ε'}) = ${qa}</td>
+          <td class="mono">δ̂(${q},${mapping.b || 'ε'}) = ${qb}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderAll(){
+      renderSourceTape();
+      renderBuffer();
+      renderAState();
+      buildBTable();
+      el('expandedHX').textContent = expanded || 'ε';
+      el('currentSigma').textContent = currentSigmaChar ?? '—';
+      el('currentGamma').textContent = currentBuffer.length ? currentBuffer.join('') : '—';
+    }
+
+    function resetDemo(){
+      mapping.a = sanitizeGamma(el('ha').value);
+      mapping.b = sanitizeGamma(el('hb').value);
+      sigmaInput = sanitizeSigma(el('inputX').value).split('');
+      el('ha').value = mapping.a;
+      el('hb').value = mapping.b;
+      el('inputX').value = sigmaInput.join('');
+
+      sourceIndex = 0;
+      bufferIndex = -1;
+      currentBuffer = [];
+      currentSigmaChar = null;
+      aState = 'q0';
+      expanded = '';
+      mode = sigmaInput.length === 0 ? 'finished' : 'sourceStart';
+      stopAuto();
+      renderAll();
+      el('finalConclusion').innerHTML = sigmaInput.length === 0
+        ? `输入为空串 <span class="mono">ε</span>。此时 <span class="mono">h(ε)=ε</span>，A 停在 ${stateHTML(aState)}，因此 B 也停在同一状态。`
+        : '等待演示结束。';
+      if(sigmaInput.length === 0){
+        el('narration').innerHTML = '空串不需要展开；因为 A 与 B 共享开始状态，所以直接看 q0 是否为接受状态。';
+      } else {
+        el('narration').innerHTML = 'B 准备读取 x 的第一个字符。每读入一个源字符，都会把它映射成一段 Γ 上的字符串，交给 A 去扫描。';
+      }
+      el('stepFormula').textContent = 'δ′(q, a) = δ̂(q, h(a))';
+      updateButtons();
+    }
+
+    function updateButtons(){
+      const finished = mode === 'finished';
+      el('stepBtn').disabled = finished;
+      el('playBtn').disabled = finished;
+      el('pauseBtn').disabled = interval === null;
+    }
+
+    function nextStep(){
+      if(mode === 'finished') return;
+
+      if(mode === 'sourceStart'){
+        currentSigmaChar = sigmaInput[sourceIndex];
+        currentBuffer = (mapping[currentSigmaChar] || '').split('');
+        bufferIndex = currentBuffer.length > 0 ? 0 : -1;
+        mode = currentBuffer.length > 0 ? 'bufferStep' : 'bufferStep';
+
+        el('narration').innerHTML = `B 现在读入源串中的字符 <span class="mono">${currentSigmaChar}</span>，按照同态先把它翻译成 <span class="mono">h(${currentSigmaChar})=${currentBuffer.join('') || 'ε'}</span>，并装载到缓冲区。`;
+        el('stepFormula').textContent = `当前处理：δ′(${aState}, ${currentSigmaChar}) = δ̂(${aState}, h(${currentSigmaChar})) = δ̂(${aState}, ${currentBuffer.join('') || 'ε'})`;
+        renderAll();
+        updateButtons();
+        return;
+      }
+
+      if(mode === 'bufferStep'){
+        if(currentBuffer.length === 0){
+          const old = aState;
+          const newState = deltaHat(aState, '');
+          expanded += '';
+          aState = newState;
+          el('narration').innerHTML = `由于 <span class="mono">h(${currentSigmaChar})=ε</span>，A 不消耗任何 Γ 上字符，状态保持不变：<span class="mono">${old} → ${newState}</span>。`;
+          el('stepFormula').textContent = `δ′(${old}, ${currentSigmaChar}) = δ̂(${old}, ε) = ${newState}`;
+          sourceIndex += 1;
+          if(sourceIndex >= sigmaInput.length){
+            mode = 'finished';
+            finishDemo();
+          } else {
+            currentSigmaChar = null;
+            currentBuffer = [];
+            bufferIndex = -1;
+            mode = 'sourceStart';
+          }
+          renderAll();
+          updateButtons();
+          return;
+        }
+
+        if(bufferIndex < currentBuffer.length){
+          const bit = currentBuffer[bufferIndex];
+          const old = aState;
+          aState = delta[aState][bit];
+          expanded += bit;
+          el('narration').innerHTML = `A 正在扫描缓冲区中的第 ${bufferIndex + 1} 个字符 <span class="mono">${bit}</span>：状态从 <span class="mono">${old}</span> 变为 <span class="mono">${aState}</span>。`;
+          el('stepFormula').textContent = `在 δ̂ 中继续推进：δ(${old}, ${bit}) = ${aState}`;
+          bufferIndex += 1;
+          if(bufferIndex >= currentBuffer.length){
+            const fromState = deltaHat(deltaHat('q0', expanded.slice(0, expanded.length - currentBuffer.length)), currentBuffer.join('')); // not used logically, keep text safe
+            const endState = aState;
+            const justDone = currentBuffer.join('');
+            el('narration').innerHTML = `字符 <span class="mono">${currentSigmaChar}</span> 的整段像 <span class="mono">h(${currentSigmaChar})=${justDone || 'ε'}</span> 已全部被 A 扫描完。于是，B 在这一输入上的一次转移就等价于 A 做完一次 <span class="mono">δ̂</span> 计算。`;
+            el('stepFormula').textContent = `因此：δ′(${deltaHat('q0', expanded.slice(0, Math.max(0, expanded.length - justDone.length)))}, ${currentSigmaChar}) = δ̂(${deltaHat('q0', expanded.slice(0, Math.max(0, expanded.length - justDone.length)))}, ${justDone || 'ε'}) = ${endState}`;
+            sourceIndex += 1;
+            currentSigmaChar = null;
+            currentBuffer = [];
+            bufferIndex = -1;
+            mode = sourceIndex >= sigmaInput.length ? 'finished' : 'sourceStart';
+            if(mode === 'finished') finishDemo();
+          }
+          renderAll();
+          updateButtons();
+          return;
+        }
+      }
+    }
+
+    function finishDemo(){
+      const hx = sigmaInput.map(ch => mapping[ch]).join('');
+      const accepted = accepting.has(aState);
+      el('finalConclusion').innerHTML = `
+        对输入 <span class="mono">x=${sigmaInput.join('') || 'ε'}</span>，展开得到 <span class="mono">h(x)=${hx || 'ε'}</span>。<br>
+        A 最终停在 ${stateHTML(aState)}。因为 B 的接受状态集与 A 相同，所以：<br>
+        <b>${accepted ? 'x ∈ h⁻¹(L)' : 'x ∉ h⁻¹(L)'}</b>，等价地，<b>${accepted ? 'h(x) ∈ L' : 'h(x) ∉ L'}</b>。
+      `;
+      el('narration').innerHTML = `整个源串已经处理完。现在把所有分段拼起来，就是完整的 <span class="mono">h(x)</span>；而 B 是否接受 x，只需要看 A 扫完 <span class="mono">h(x)</span> 后是否停在接受状态。`;
+      renderAll();
+      updateButtons();
+    }
+
+    function stopAuto(){
+      if(interval !== null){
+        clearInterval(interval);
+        interval = null;
+      }
+      updateButtons();
+    }
+
+    el('buildBtn').addEventListener('click', resetDemo);
+    el('stepBtn').addEventListener('click', nextStep);
+    el('playBtn').addEventListener('click', () => {
+      if(mode === 'finished') return;
+      stopAuto();
+      interval = setInterval(() => {
+        if(mode === 'finished') {
+          stopAuto();
+          return;
+        }
+        nextStep();
+      }, 900);
+      updateButtons();
+    });
+    el('pauseBtn').addEventListener('click', stopAuto);
+
+    ['ha','hb','inputX'].forEach(id => {
+      el(id).addEventListener('keydown', e => {
+        if(e.key === 'Enter') resetDemo();
+      });
+    });
+
+    resetDemo();
+  </script>
+</body>
+</html>

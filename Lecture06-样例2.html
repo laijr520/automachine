@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>泵引理三个条件演示</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#131a33;
+      --panel2:#1a2242;
+      --text:#eef2ff;
+      --muted:#b8c0e0;
+      --accent:#7c9cff;
+      --x:#33d1ff;
+      --y:#ffb84d;
+      --z:#7ee787;
+      --danger:#ff6b81;
+      --line:#2c3769;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+      background: radial-gradient(circle at top, #16214a 0%, var(--bg) 42%, #060912 100%);
+      color:var(--text);
+      min-height:100vh;
+    }
+    .wrap{
+      max-width:1180px;
+      margin:0 auto;
+      padding:28px 24px 40px;
+    }
+    .hero{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:24px;
+      padding:24px 26px;
+      box-shadow:0 18px 60px rgba(0,0,0,.28);
+    }
+    h1{
+      margin:0 0 10px;
+      font-size:34px;
+      line-height:1.2;
+    }
+    .sub{
+      color:var(--muted);
+      font-size:18px;
+      line-height:1.8;
+    }
+    .math{
+      font-family: "Times New Roman", Georgia, serif;
+      font-style: italic;
+      letter-spacing:.3px;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap:22px;
+      margin-top:22px;
+    }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:22px;
+      padding:20px;
+      box-shadow:0 14px 40px rgba(0,0,0,.24);
+    }
+    .card h2{
+      margin:0 0 14px;
+      font-size:22px;
+    }
+    .string-panel{
+      padding:18px 16px 22px;
+      background:rgba(255,255,255,.03);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .legend{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:14px;
+      margin-bottom:14px;
+    }
+    .dot{width:12px;height:12px;border-radius:999px;display:inline-block;margin-right:6px;vertical-align:middle}
+    .line{
+      position:relative;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      padding:10px 0 12px;
+    }
+    .cell{
+      width:58px;
+      height:58px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.12);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:22px;
+      font-weight:700;
+      background:#20294f;
+      position:relative;
+      transform:translateY(0);
+      transition:.35s ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 22px rgba(0,0,0,.22);
+    }
+    .cell small{
+      position:absolute;
+      bottom:4px;
+      font-size:11px;
+      color:rgba(255,255,255,.62);
+      font-weight:500;
+    }
+    .cell.x{background:linear-gradient(180deg, rgba(51,209,255,.35), rgba(51,209,255,.17)); border-color:rgba(51,209,255,.55)}
+    .cell.y{background:linear-gradient(180deg, rgba(255,184,77,.40), rgba(255,184,77,.18)); border-color:rgba(255,184,77,.65)}
+    .cell.z{background:linear-gradient(180deg, rgba(126,231,135,.34), rgba(126,231,135,.16)); border-color:rgba(126,231,135,.58)}
+    .cell.fade{opacity:.38; transform:translateY(8px) scale(.95)}
+    .cell.bump{animation:bump .85s ease infinite alternate}
+    @keyframes bump{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+    .boundaries{
+      position:relative;
+      height:30px;
+      margin-top:4px;
+    }
+    .tag{
+      position:absolute;
+      transform:translateX(-50%);
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:13px;
+      color:white;
+      background:#2a3670;
+      border:1px solid rgba(255,255,255,.16);
+      white-space:nowrap;
+    }
+    .rule-box{
+      display:grid;
+      gap:14px;
+    }
+    .rule{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:15px 16px;
+      background:rgba(255,255,255,.03);
+      transition:.25s ease;
+    }
+    .rule.active{outline:2px solid rgba(124,156,255,.55); background:rgba(124,156,255,.08)}
+    .rule h3{
+      margin:0 0 8px;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .no{
+      width:28px;height:28px;border-radius:50%;
+      display:inline-flex;align-items:center;justify-content:center;
+      background:#293569;color:#fff;font-size:15px;
+    }
+    .rule p{margin:0;color:var(--muted);line-height:1.75;font-size:15px}
+    .control{
+      display:flex;flex-wrap:wrap;gap:10px;margin-top:14px
+    }
+    button{
+      border:none;
+      background:linear-gradient(180deg, #7c9cff, #5e7ef7);
+      color:white;
+      border-radius:12px;
+      padding:10px 14px;
+      font-size:15px;
+      cursor:pointer;
+      box-shadow:0 8px 20px rgba(89,118,240,.28);
+      transition:.18s ease;
+    }
+    button:hover{transform:translateY(-1px)}
+    .ghost{background:#273159;box-shadow:none}
+    .pump-title{margin:4px 0 8px;font-size:18px}
+    .formula{
+      font-size:26px;
+      margin:10px 0 16px;
+      padding:14px 16px;
+      border-radius:16px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .formula .x{color:var(--x);font-weight:700}
+    .formula .y{color:var(--y);font-weight:700}
+    .formula .z{color:var(--z);font-weight:700}
+    .formula .k{color:#ffd866;font-weight:700}
+    .explain{
+      color:var(--muted);
+      font-size:15px;
+      line-height:1.8;
+    }
+    .tip{
+      margin-top:14px;
+      padding:13px 14px;
+      border-left:4px solid var(--accent);
+      background:rgba(124,156,255,.08);
+      border-radius:10px;
+      color:#dce4ff;
+      line-height:1.7;
+      font-size:15px;
+    }
+    .footer-note{
+      margin-top:18px;
+      color:#93a0d3;
+      font-size:14px;
+      line-height:1.7;
+    }
+    @media (max-width: 980px){
+      .layout{grid-template-columns:1fr}
+      .cell{width:50px;height:50px;font-size:18px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>泵引理：只讲清楚这三个条件</h1>
+      <div class="sub">
+        若 <span class="math">L</span> 是正则语言，则存在常数 <span class="math">n</span>，使得任何满足 <span class="math">w∈L</span> 且 <span class="math">|w|≥n</span> 的串，
+        都可以写成 <span class="math">w=xyz</span>，并满足下面三个条件。
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="card">
+        <h2>直观看 <span class="math">w = xyz</span></h2>
+        <div class="string-panel">
+          <div class="legend">
+            <span><span class="dot" style="background:var(--x)"></span>x 段</span>
+            <span><span class="dot" style="background:var(--y)"></span>y 段</span>
+            <span><span class="dot" style="background:var(--z)"></span>z 段</span>
+            <span><span class="dot" style="background:var(--accent)"></span>前 n 个字符范围</span>
+          </div>
+          <div id="line" class="line"></div>
+          <div class="boundaries">
+            <div class="tag" id="nTag">前 n 个字符</div>
+            <div class="tag" id="xyTag" style="top:0;background:#4c5fc3;">|xy|</div>
+          </div>
+          <div class="tip">
+            这里用一个示意串来说明：蓝色是 <span class="math">x</span>，橙色是 <span class="math">y</span>，绿色是 <span class="math">z</span>。
+            你可以点击右侧按钮，分别看三个条件各自强调什么。
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>三个条件</h2>
+        <div class="rule-box">
+          <div class="rule active" id="rule1">
+            <h3><span class="no">1</span> <span class="math">|y| &gt; 0</span></h3>
+            <p><span class="math">y</span> 不能为空。也就是说，中间这段必须真正包含至少一个字符，才能谈“泵”一次、两次或删掉它。</p>
+          </div>
+          <div class="rule" id="rule2">
+            <h3><span class="no">2</span> <span class="math">|xy| ≤ n</span></h3>
+            <p><span class="math">x</span> 和 <span class="math">y</span> 合起来，不能超过前 <span class="math">n</span> 个字符。换句话说，<span class="math">y</span> 一定发生在前面这段有限前缀里。</p>
+          </div>
+          <div class="rule" id="rule3">
+            <h3><span class="no">3</span> <span class="math">∀k≥0, xy<sup>k</sup>z ∈ L</span></h3>
+            <p>把 <span class="math">y</span> 重复 0 次、1 次、2 次、3 次……得到的新串，仍然都应该属于 <span class="math">L</span>。</p>
+          </div>
+        </div>
+
+        <div class="control">
+          <button id="show1">看条件 1</button>
+          <button id="show2">看条件 2</button>
+          <button id="show3">看条件 3</button>
+          <button class="ghost" id="reset">重置</button>
+        </div>
+
+        <div class="pump-title">当前示意</div>
+        <div class="formula" id="formula"></div>
+        <div class="explain" id="explain"></div>
+        <div class="control" id="pumpBtns" style="display:none">
+          <button data-k="0">k = 0</button>
+          <button data-k="1">k = 1</button>
+          <button data-k="2">k = 2</button>
+          <button data-k="3">k = 3</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer-note">
+      课堂上可直接这样总结：<br>
+      条件 1 说明“可泵的那一段必须真实存在”；条件 2 说明“可泵的位置被限制在前 n 个字符内”；条件 3 说明“这段可以重复任意次而不离开语言”。
+    </div>
+  </div>
+
+  <script>
+    const tokens = ['a₁','a₂','a₃','a₄','a₅','a₆','a₇','a₈','a₉'];
+    const n = 5;      // 前 n 个字符
+    const xLen = 2;
+    const yLen = 2;
+    const zLen = tokens.length - xLen - yLen;
+
+    const line = document.getElementById('line');
+    const formula = document.getElementById('formula');
+    const explain = document.getElementById('explain');
+    const nTag = document.getElementById('nTag');
+    const xyTag = document.getElementById('xyTag');
+    const pumpBtns = document.getElementById('pumpBtns');
+
+    function classify(index){
+      if(index < xLen) return 'x';
+      if(index < xLen + yLen) return 'y';
+      return 'z';
+    }
+
+    function renderLine(mode = 'reset', k = 1){
+      line.innerHTML = '';
+      let current = [];
+      if(mode === 'pump'){
+        current = [
+          ...tokens.slice(0, xLen),
+          ...Array.from({length: yLen * k}, (_, i) => 'y' + (i+1)),
+          ...tokens.slice(xLen + yLen)
+        ];
+      } else {
+        current = tokens.slice();
+      }
+
+      if(mode === 'pump'){
+        current.forEach((t, idx) => {
+          const div = document.createElement('div');
+          div.className = 'cell';
+          if(idx < xLen) div.classList.add('x');
+          else if(idx < xLen + yLen * k) div.classList.add('y');
+          else div.classList.add('z');
+          div.textContent = t;
+          line.appendChild(div);
+        });
+      } else {
+        tokens.forEach((t, idx) => {
+          const div = document.createElement('div');
+          div.className = 'cell ' + classify(idx);
+          if(mode === 'rule1' && classify(idx) === 'y') div.classList.add('bump');
+          if(mode === 'rule2' && idx >= n) div.classList.add('fade');
+          div.textContent = t;
+          div.innerHTML = `${t}<small>${idx+1}</small>`;
+          line.appendChild(div);
+        });
+      }
+
+      requestAnimationFrame(positionTags);
+    }
+
+    function positionTags(){
+      const cells = [...document.querySelectorAll('.cell')];
+      if(!cells.length) return;
+      const first = cells[0].getBoundingClientRect();
+      const container = line.getBoundingClientRect();
+
+      const nthCell = cells[Math.min(n-1, cells.length-1)].getBoundingClientRect();
+      const xyCell = cells[Math.min(xLen+yLen-1, cells.length-1)].getBoundingClientRect();
+
+      nTag.style.left = (nthCell.right - container.left) + 'px';
+      xyTag.style.left = (xyCell.right - container.left) + 'px';
+    }
+
+    function setActive(id){
+      ['rule1','rule2','rule3'].forEach(r => document.getElementById(r).classList.remove('active'));
+      if(id) document.getElementById(id).classList.add('active');
+    }
+
+    function showRule1(){
+      setActive('rule1');
+      pumpBtns.style.display = 'none';
+      renderLine('rule1');
+      formula.innerHTML = `<span class="x">x</span><span class="y">y</span><span class="z">z</span>　其中 <span class="y">y</span> = a₃a₄`;
+      explain.innerHTML = `这里橙色的 <span class="math">y</span> 段会跳动，表示它不是空串。<br>这正是条件 <span class="math">|y|&gt;0</span>：<span class="math">y</span> 至少要含有一个字符。`;
+    }
+
+    function showRule2(){
+      setActive('rule2');
+      pumpBtns.style.display = 'none';
+      renderLine('rule2');
+      formula.innerHTML = `|<span class="x">x</span><span class="y">y</span>| = 4 ≤ n = 5`;
+      explain.innerHTML = `蓝色和橙色加起来就是 <span class="math">xy</span>。它们必须完全落在前 <span class="math">n</span> 个字符之内。<br>这就是条件 <span class="math">|xy|≤n</span>。`;
+    }
+
+    function pumpedString(k){
+      const x = tokens.slice(0,xLen).join('');
+      const y = tokens.slice(xLen, xLen+yLen).join('');
+      const z = tokens.slice(xLen+yLen).join('');
+      return `${x}${y.repeat(k)}${z}`;
+    }
+
+    function showRule3(defaultK = 2){
+      setActive('rule3');
+      pumpBtns.style.display = 'flex';
+      renderLine('pump', defaultK);
+      formula.innerHTML = `<span class="x">x</span><span class="y">y</span><sup class="k">${defaultK}</sup><span class="z">z</span>　即 ${pumpedString(defaultK)}`;
+      explain.innerHTML = `现在只对橙色的 <span class="math">y</span> 做重复。<br>条件 3 要求：不管 <span class="math">k=0,1,2,3,...</span> 取什么值，<span class="math">xy<sup>k</sup>z</span> 都仍在 <span class="math">L</span> 中。`;
+    }
+
+    function resetAll(){
+      setActive('rule1');
+      pumpBtns.style.display = 'none';
+      renderLine('reset');
+      formula.innerHTML = `<span class="x">x</span><span class="y">y</span><span class="z">z</span>　且满足三个条件`;
+      explain.innerHTML = `先把串分成三段：前面是 <span class="math">x</span>，中间可泵的是 <span class="math">y</span>，后面是 <span class="math">z</span>。右侧三个按钮分别对应三个条件。`;
+    }
+
+    document.getElementById('show1').addEventListener('click', showRule1);
+    document.getElementById('show2').addEventListener('click', showRule2);
+    document.getElementById('show3').addEventListener('click', () => showRule3(2));
+    document.getElementById('reset').addEventListener('click', resetAll);
+
+    pumpBtns.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => showRule3(Number(btn.dataset.k)));
+    });
+
+    window.addEventListener('resize', positionTags);
+    resetAll();
+  </script>
+</body>
+</html>

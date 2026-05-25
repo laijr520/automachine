@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>路径迭代法：一次奇妙的旅行</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .formula-box {
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        .part {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 0 5px;
+            color: white;
+        }
+        .part-1 { background-color: #3498db; } /* 蓝色: 出发 */
+        .part-2 { background-color: #e67e22; } /* 橙色: 循环 */
+        .part-3 { background-color: #2ecc71; } /* 绿色: 到达 */
+        
+        .story-section {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            padding: 15px;
+            border-left: 5px solid #bdc3c7;
+            background-color: #fcfcfc;
+        }
+        .story-section.blue { border-left-color: #3498db; }
+        .story-section.orange { border-left-color: #e67e22; }
+        .story-section.green { border-left-color: #2ecc71; }
+        
+        .icon {
+            font-size: 2em;
+            margin-right: 20px;
+        }
+        .content h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        /* 优化上下标的显示位置 */
+        sup, sub {
+            font-size: 0.75em;
+            line-height: 0;
+            position: relative;
+            vertical-align: baseline;
+        }
+        sup { top: -0.5em; }
+        sub { bottom: -0.25em; }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>用“航空旅行”秒懂路径迭代法 (Case 2)</h1>
+        <p>假设要规划一条从 <strong>城市 i</strong> 到 <strong>城市 j</strong> 的航线。规则是：途经的所有中转城市，其级别不能超过 <strong>k</strong>。</p>
+        
+        <div class="formula-box">
+            Case 2 核心公式：路径经过 k 至少一次<br><br>
+            <span class="part part-1">R<sub>ik</sub><sup>(k-1)</sup></span> 
+            <span>连接</span>
+            <span class="part part-2">( R<sub>kk</sub><sup>(k-1)</sup> )*</span> 
+            <span>连接</span>
+            <span class="part part-3">R<sub>kj</sub><sup>(k-1)</sup></span>
+        </div>
+
+        <h2>✈️ 拆解这段奇妙的旅程</h2>
+
+        <div class="story-section blue">
+            <div class="icon">🛫</div>
+            <div class="content">
+                <h3 style="color: #3498db;">第一段：启程前往超级大枢纽</h3>
+                <p><strong>公式对应：</strong> <code>R<sub>ik</sub><sup>(k-1)</sup></code></p>
+                <p><strong>现实场景：</strong> 从老家（城市 i）出发，第一次抵达国际大机场（城市 k）。在抵达这个超级枢纽之前，只能在级别较低的小机场（编号小于等于 k-1 的状态）转机。</p>
+            </div>
+        </div>
+
+        <div class="story-section orange">
+            <div class="icon">🔄</div>
+            <div class="content">
+                <h3 style="color: #e67e22;">第二段：在枢纽城市的疯狂游乐（可跳过）</h3>
+                <p><strong>公式对应：</strong> <code>( R<sub>kk</sub><sup>(k-1)</sup> )*</code></p>
+                <p><strong>现实场景：</strong> 既然来到了大城市 k，不如多玩几圈！这里的 <code>*</code> 代表克林闭包（0次或多次）。意思是，可以从城市 k 出发，去周边的小城市（编号 ≤ k-1）旅游一圈，然后再回到大城市 k。这个周边游可以去 0 次（直接转机），也可以去无数次！</p>
+            </div>
+        </div>
+
+        <div class="story-section green">
+            <div class="icon">🛬</div>
+            <div class="content">
+                <h3 style="color: #2ecc71;">第三段：告别枢纽，直奔终点</h3>
+                <p><strong>公式对应：</strong> <code>R<sub>kj</sub><sup>(k-1)</sup></code></p>
+                <p><strong>现实场景：</strong> 玩够了，最后一次离开大城市 k，前往最终目的地（城市 j）。同样，这最后一段路程里，也只能在级别较低的小机场（编号 ≤ k-1）转机了，不能再回大枢纽 k。</p>
+            </div>
+        </div>
+
+        <h2>💡 总结</h2>
+        <p>整个 Case 2 的公式，其实就是规划了一条完美的旅行路线：<strong>去枢纽的去程</strong> + <strong>以枢纽为中心的周边游（可选）</strong> + <strong>离开枢纽的返程</strong>。三段拼在一起，就涵盖了所有经过城市 k 至少一次的可能路线！</p>
+    </div>
+
+</body>
+</html>

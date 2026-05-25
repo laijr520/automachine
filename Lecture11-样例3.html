@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDA 到 CFG：变量与产生式构造</title>
+  <style>
+    :root{
+      --ink:#152033;
+      --muted:#5f6678;
+      --purple:#7c3aed;
+      --blue:#2563eb;
+      --teal:#0f766e;
+      --amber:#f59e0b;
+      --green:#16a34a;
+      --panel:#ffffff;
+      --shadow:0 18px 44px rgba(60,80,170,.12);
+      --radius:22px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 0 0, rgba(124,58,237,.13), transparent 24%),
+        radial-gradient(circle at 100% 0, rgba(37,99,235,.11), transparent 24%),
+        linear-gradient(180deg,#fcfbff 0%,#f7f9ff 100%);
+    }
+    .wrap{max-width:1460px; margin:0 auto; padding:24px}
+    .hero{
+      display:grid; grid-template-columns:1.18fr .82fr; gap:20px; align-items:center;
+      background:linear-gradient(135deg,#7c3aed,#2563eb);
+      color:#fff; border-radius:28px; box-shadow:var(--shadow); padding:28px 30px;
+    }
+    .hero h1{margin:0 0 10px; font-size:40px; line-height:1.06}
+    .hero p{margin:0; font-size:18px; line-height:1.72; color:rgba(255,255,255,.92)}
+    .tags{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px}
+    .tag{padding:8px 12px; border-radius:999px; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.18); font-size:14px}
+    .hero-card{background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.16); border-radius:24px; padding:18px 20px}
+    .hero-card .small{font-size:14px; opacity:.92; margin-bottom:8px}
+    .hero-card .formula{font-size:34px; font-weight:800; line-height:1.45; text-align:center; margin:10px 0}
+    .hero-card .explain{font-size:15px; line-height:1.72; color:rgba(255,255,255,.92)}
+    .grid{margin-top:22px; display:grid; grid-template-columns:1.02fr .98fr; gap:22px; align-items:start}
+    .panel{background:var(--panel); border:1px solid rgba(37,99,235,.08); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
+    .head{padding:18px 22px 14px; border-bottom:1px solid rgba(37,99,235,.08); display:flex; justify-content:space-between; align-items:center; gap:12px}
+    .head h2{margin:0; font-size:24px}
+    .caption{font-size:14px; color:var(--muted); line-height:1.6}
+    .body{padding:20px 22px 22px}
+    .meaning{padding:16px 18px; border-radius:20px; background:linear-gradient(180deg,#faf7ff,#f5f3ff); border:1px solid #eadcff; margin-bottom:16px}
+    .meaning .title{font-size:16px; font-weight:800; color:#6d28d9; margin-bottom:8px}
+    .meaning .formula{font-size:34px; font-weight:800; text-align:center; margin:8px 0 10px}
+    .meaning .desc{font-size:15px; line-height:1.75; color:var(--muted)}
+    .control-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px}
+    .field{background:#fbfdff; border:1px solid #e3ecff; border-radius:18px; padding:14px}
+    .field label{display:block; margin-bottom:8px; font-size:14px; color:var(--muted); font-weight:700}
+    select,input{width:100%; border:1px solid #d7e4ff; border-radius:12px; padding:10px 12px; font-size:15px; background:#fff}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px}
+    .box{background:#fbfdff; border:1px solid #e3ecff; border-radius:20px; padding:16px}
+    .box h3{margin:0 0 10px; font-size:18px}
+    .box p{margin:0; color:var(--muted); line-height:1.75; font-size:15px}
+    .chips{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px}
+    .chip{padding:10px 12px; border-radius:14px; background:#fff; border:1px solid #e3ecff; font-weight:800}
+    .statebar{display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:12px}
+    .state{padding:12px 16px; border-radius:16px; color:#fff; font-weight:800; min-width:90px; text-align:center; box-shadow:0 10px 20px rgba(37,99,235,.12)}
+    .s0{background:#2563eb}.s1{background:#7c3aed}.s2{background:#0f766e}
+    .arrow{font-size:28px; color:#94a3b8}
+    .schema{padding:16px 18px; border-radius:20px; border:1px solid #dbe7ff; background:linear-gradient(180deg,#f8fbff,#f3f8ff); margin-bottom:16px}
+    .schema .title{font-size:16px; font-weight:800; color:#1d4ed8; margin-bottom:10px}
+    .schema .formula{font-size:32px; line-height:1.55; font-weight:800; text-align:center; word-break:break-word}
+    .prod-list{display:grid; gap:10px; margin-top:14px}
+    .prod{padding:14px 16px; border-radius:16px; border:1px solid #e3ecff; background:#fff; font-size:20px; line-height:1.6; word-break:break-word}
+    .prod strong{color:#1d4ed8}
+    .mini{font-size:14px; color:var(--muted)}
+    .hint-grid{display:grid; gap:12px}
+    .hint{background:#fffbeb; border:1px solid #fde7b1; border-radius:18px; padding:14px 16px; line-height:1.75; font-size:15px}
+    .init-list{display:grid; gap:10px; margin-top:12px}
+    .init{padding:12px 14px; border:1px solid #e3ecff; border-radius:16px; background:#fff; font-size:18px; font-weight:800}
+    .controls{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px}
+    button{border:none; border-radius:14px; padding:11px 16px; font-size:15px; font-weight:800; cursor:pointer; transition:.2s ease}
+    button:hover{transform:translateY(-1px)}
+    .btn1{background:linear-gradient(135deg,#7c3aed,#2563eb); color:#fff}
+    .btn2{background:#eef5ff; color:#1d4ed8}
+    .btn3{background:#f5edff; color:#7c3aed}
+    .summary{margin-top:16px; padding:15px 16px; border-radius:18px; border:1px solid #dbe7ff; background:linear-gradient(90deg,#eff6ff,#f5f3ff); line-height:1.75; font-size:15px}
+    @media (max-width:1160px){.hero,.grid,.row,.control-grid{grid-template-columns:1fr}}
+    @media (max-width:760px){.wrap{padding:14px}.hero h1{font-size:30px}.meaning .formula,.schema .formula{font-size:24px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <h1>由 PDA 到 CFG：<br>把“弹栈过程”翻译成“产生式”</h1>
+        <p>这份 HTML 对应 PPT 第 27–28 页，核心是把变量 <strong>[qXp]</strong> 的含义讲透，再把一条转移 <strong>δ(q,a,X) ⊇ (p,Y₁Y₂…Yₙ)</strong> 自动翻译成一组 CFG 产生式。适合上课时边讲边切换参数。</p>
+        <div class="tags">
+          <div class="tag">变量： [qXp] 表示“从 q 出发弹完 X，到达 p”</div>
+          <div class="tag">初始产生式： S → [q₀Z₀p]</div>
+          <div class="tag">一般产生式：由一次“替换 X 为 Y₁…Yₙ”扩展而来</div>
+        </div>
+      </div>
+      <div class="hero-card">
+        <div class="small">一句话直觉</div>
+        <div class="formula">“先把 X 展开成一串栈符号，再把那串符号一个个弹完。”</div>
+        <div class="explain">所以一条 PDA 转移，不会只对应一条文法产生式，而会对应 <strong>|Q|<sup>n-1</sup></strong> 条“中间状态枚举”的产生式。课堂上的关键不是死记公式，而是理解：<strong>r₁,r₂,…</strong> 这些中间状态是在记录“前一个符号弹完后，接下来从哪里继续”。</div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="head">
+          <div>
+            <h2>构造器：一条转移如何变成产生式</h2>
+            <div class="caption">改动下面参数，右侧会自动更新“变量含义、状态路径、产生式列表”。</div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="meaning">
+            <div class="title">变量的语义</div>
+            <div class="formula" id="varMeaning">[q₀Xq₁]</div>
+            <div class="desc" id="varDesc"></div>
+          </div>
+
+          <div class="control-grid">
+            <div class="field">
+              <label>起始状态 q</label>
+              <select id="qSel"></select>
+            </div>
+            <div class="field">
+              <label>读入符号 a</label>
+              <select id="aSel"></select>
+            </div>
+            <div class="field">
+              <label>被替换的栈符号 X</label>
+              <select id="xSel"></select>
+            </div>
+            <div class="field">
+              <label>第一步到达状态 p</label>
+              <select id="pSel"></select>
+            </div>
+            <div class="field">
+              <label>替换后的串 Y₁…Yₙ</label>
+              <select id="rhsSel"></select>
+            </div>
+            <div class="field">
+              <label>最终目标状态 rₙ</label>
+              <select id="targetSel"></select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="box">
+              <h3>这条 PDA 转移</h3>
+              <div class="schema">
+                <div class="title">输入模型</div>
+                <div class="formula" id="transitionFormula"></div>
+              </div>
+              <p>意思是：在状态 q、栈顶为 X 时，读入 a（也可能是 ε），先把 X 替换成 Y₁Y₂…Yₙ，并进入状态 p。接下来，再把新栈符号一个一个完全弹出，最后到达目标状态 rₙ。</p>
+              <div class="statebar" id="statebar"></div>
+            </div>
+            <div class="box">
+              <h3>从这条转移得到的产生式</h3>
+              <div class="schema">
+                <div class="title">一般模式（拆成三段更容易看）</div>
+                <div class="formula" id="schemaFormula"></div>
+              </div>
+              <div class="mini" id="schemaMini">把右部看成三段：<strong>先读入 a</strong>，再<strong>依次处理 Y₁…Yₙ</strong>，其中最后一段 <strong>[r<sub>n-1</sub>Y<sub>n</sub>r<sub>n</sub>]</strong> 表示“把最后一个栈符号处理完，并抵达最终目标状态 r<sub>n</sub>”。</div>
+            </div>
+          </div>
+
+          <div class="box">
+            <h3>实例化后的产生式</h3>
+            <div class="prod-list" id="prodList"></div>
+            <div class="controls">
+              <button class="btn2" id="toyBtn">切到课上常用示例：δ(q₀,a,X) ⊇ (q₁,BC)</button>
+              <button class="btn3" id="epsBtn">切到 ε 情形：δ(q₁,ε,A) ⊇ (q₂,ε)</button>
+            </div>
+            <div class="summary" id="prodSummary"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="head">
+          <div>
+            <h2>配套说明</h2>
+            <div class="caption">把 PPT 第 27–28 页的两个关键点讲清楚。</div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="box" style="margin-bottom:16px">
+            <h3>① 先定义变量： [qXp] 到底是什么意思？</h3>
+            <p>它不是“看到 X 就能立刻到 p”，而是表示：<strong>从状态 q 出发，最终把栈符号 X 完整处理掉</strong>，并在这个处理结束时到达状态 p。这个过程中会消耗某段输入，因此 [qXp] 正好可以被看成一个能派生那段输入串的文法变元。</p>
+            <div class="chips">
+              <div class="chip">起点：状态 q</div>
+              <div class="chip">任务：弹完 X</div>
+              <div class="chip">终点：状态 p</div>
+              <div class="chip">结果：生成一段输入串</div>
+            </div>
+          </div>
+
+          <div class="box" style="margin-bottom:16px">
+            <h3>② 为什么会出现 r₁, r₂, …, rₙ？</h3>
+            <p>因为 X 被替换成 Y₁Y₂…Yₙ 后，要把它们依次弹完。问题在于：<strong>弹完 Y₁ 以后会停在哪个状态？</strong> 这个状态事先并不知道，所以要用中间状态 r₁ 记录；再弹完 Y₂ 后停在哪，也不确定，于是再用 r₂ 记录……这就是那一串中间状态的来源。</p>
+            <div class="statebar">
+              <div class="state s0">q</div><div class="arrow">→</div>
+              <div class="state s1">p</div><div class="arrow">→</div>
+              <div class="state s2">r₁</div><div class="arrow">→</div>
+              <div class="state s0">r₂</div><div class="arrow">→</div>
+              <div class="state s1">…</div><div class="arrow">→</div>
+              <div class="state s2">rₙ</div>
+            </div>
+          </div>
+
+          <div class="box" style="margin-bottom:16px">
+            <h3>③ 初始产生式为什么是 S → [q₀Z₀p]？</h3>
+            <p>因为整个 PDA 的接受过程，就是从初始状态 <strong>q₀</strong> 出发，把初始栈符号 <strong>Z₀</strong> 完整处理掉，并在某个状态 <strong>p</strong> 结束。若采用空栈接受，就只要“栈最终被清空”即可，所以对每个 p∈Q 都要给一条 <strong>S→[q₀Z₀p]</strong>。</p>
+            <div class="init-list" id="initList"></div>
+          </div>
+
+          <div class="hint-grid">
+            <div class="hint"><strong>课堂建议 1：</strong> 先只讲变量 [qXp] 的语义，不急着上公式。学生真正卡住的通常不是公式本身，而是不知道这个三元记号到底在描述什么过程。</div>
+            <div class="hint"><strong>课堂建议 2：</strong> 讲一般式时，最好立刻接一个 n=2 的具体例子，因为这时只会出现一个中间状态 r₁，最容易让学生理解“为什么要枚举”。</div>
+            <div class="hint"><strong>课堂建议 3：</strong> 对 ε 情形单独点一下：若 X 一步就被消掉，那么根本没有后续 Y₁…Yₙ 要处理，于是产生式自然变成 <strong>[qXr] → a</strong>。</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const states = ['q₀','q₁','q₂'];
+    const inputs = ['a','b','ε'];
+    const stackSymbols = ['X','A','B','C','Z₀'];
+    const rhsOptions = ['BC','AB','C','ε'];
+
+    const qSel = document.getElementById('qSel');
+    const aSel = document.getElementById('aSel');
+    const xSel = document.getElementById('xSel');
+    const pSel = document.getElementById('pSel');
+    const rhsSel = document.getElementById('rhsSel');
+    const targetSel = document.getElementById('targetSel');
+
+    [qSel,pSel,targetSel].forEach(sel => states.forEach(s => sel.add(new Option(s,s))));
+    inputs.forEach(a => aSel.add(new Option(a,a)));
+    stackSymbols.forEach(x => xSel.add(new Option(x,x)));
+    rhsOptions.forEach(r => rhsSel.add(new Option(r,r)));
+
+    function subscriptify(s){
+      return s.replace('q₀','q₀').replace('q₁','q₁').replace('q₂','q₂');
+    }
+
+    function render(){
+      const q = qSel.value, a = aSel.value, X = xSel.value, p = pSel.value, rhs = rhsSel.value, target = targetSel.value;
+      const Ys = rhs === 'ε' ? [] : rhs.split('');
+
+      document.getElementById('varMeaning').innerHTML = `[${q}${X}${target}]`;
+      document.getElementById('varDesc').innerHTML = `表示：从状态 <strong>${q}</strong> 出发，最终把栈符号 <strong>${X}</strong> 完整处理掉，并在这个处理结束时到达状态 <strong>${target}</strong>。这个过程中会消耗一段输入串，因此该变量可被视为一个能够派生那段串的 CFG 变元。`;
+      document.getElementById('transitionFormula').innerHTML = `δ(${q}, ${a}, ${X}) ⊇ (${p}, ${rhs})`;
+
+      let schema, schemaMini;
+      if(Ys.length===0){
+        schema = `
+          <div>[${q}${X}r] → ${a}</div>
+          <div style="font-size:20px;color:#5a6272;margin-top:10px">这时没有后续栈符号，所以直接一步生成 ${a}。</div>`;
+        schemaMini = `当 n=0，也就是替换串为空时，直接退化成 <strong>[qXr] → ${a}</strong>。`;
+      }else if(Ys.length===1){
+        schema = `
+          <div>[${q}${X}r<sub>1</sub>] → ${(a === 'ε' ? 'ε' : a)} [${p}${Ys[0]}r<sub>1</sub>]</div>
+          <div style="font-size:20px;color:#5a6272;margin-top:10px">读入 ${(a === 'ε' ? 'ε' : a)} 之后，只剩 1 个栈符号 ${Ys[0]} 要处理，因此没有中间状态链。</div>`;
+        schemaMini = `把右部看成两段：<strong>先读入 ${(a === 'ε' ? 'ε' : a)}</strong>，再由 <strong>[${p}${Ys[0]}r<sub>1</sub>]</strong> 负责“把 ${Ys[0]} 从状态 ${p} 处理到 r<sub>1</sub>”。`;
+      }else{
+        const middle = Ys.slice(1, -1).map((Y, i) => `[r<sub>${i+1}</sub>${Y}r<sub>${i+2}</sub>]`).join(' ');
+        const last = `[r<sub>${Ys.length-1}</sub>${Ys[Ys.length-1]}r<sub>${Ys.length}</sub>]`;
+        schema = `
+          <div>[${q}${X}r<sub>${Ys.length}</sub>] → ${(a === 'ε' ? 'ε' : a)} [${p}${Ys[0]}r<sub>1</sub>] ${middle ? middle + ' ' : ''}<span style="color:#7c3aed;font-weight:900">${last}</span></div>
+          <div style="font-size:18px;color:#5a6272;margin-top:14px;line-height:1.8;text-align:left">
+            <strong>读法：</strong>先读入 ${(a === 'ε' ? 'ε' : a)}；然后处理第 1 个新栈符号 <strong>${Ys[0]}</strong>；<br>
+            接着一路经过中间状态 r<sub>1</sub>, r<sub>2</sub>, …；<br>
+            <strong style="color:#7c3aed">最后这一项 ${last}</strong> 的意思是：<strong>把最后一个栈符号 ${Ys[Ys.length-1]} 完整处理掉，并从 r<sub>${Ys.length-1}</sub> 走到最终目标状态 r<sub>${Ys.length}</sub></strong>。它不是“额外多出来的一项”，而是整条链的收尾。
+          </div>`;
+        schemaMini = `建议课堂上先把它读成：<strong>“a + 第一段 + 中间若干段 + 最后一段收尾”</strong>。学生最容易卡住的通常就是最后一段；实际上它只是在表达“最后一个 ${Ys[Ys.length-1]} 也要被处理完，并落到目标状态 r<sub>${Ys.length}</sub>”。`;
+      }
+      document.getElementById('schemaFormula').innerHTML = schema;
+      document.getElementById('schemaMini').innerHTML = schemaMini;
+
+      const statebar = document.getElementById('statebar');
+      if(Ys.length===0){
+        statebar.innerHTML = `<div class="state s0">${q}</div><div class="arrow">→</div><div class="state s1">${target}</div>`;
+      }else{
+        const nodes = [q,p];
+        for(let i=1;i<Ys.length;i++) nodes.push(`r${i}`);
+        nodes.push(target);
+        statebar.innerHTML = nodes.map((s, i)=>{
+          const cls = ['s0','s1','s2'][i%3];
+          return `${i?'<div class="arrow">→</div>':''}<div class="state ${cls}">${s}</div>`;
+        }).join('');
+      }
+
+      const prodList = document.getElementById('prodList');
+      let prods = [];
+      if(Ys.length===0){
+        prods = [`[${q}${X}${target}] → ${a}`];
+      }else{
+        const midCount = Ys.length - 1;
+        const combos = cartesian(Array.from({length:midCount}, ()=>states));
+        prods = combos.map(combo => {
+          const allStates = [p, ...combo, target];
+          let rhsStr = a === 'ε' ? '' : a;
+          Ys.forEach((Y, i) => {
+            rhsStr += `[${allStates[i]}${Y}${allStates[i+1]}]`;
+          });
+          return `[${q}${X}${target}] → ${rhsStr}`;
+        });
+      }
+      prodList.innerHTML = prods.map((pr, i)=>`<div class="prod"><strong>${i+1}.</strong> ${pr}</div>`).join('');
+      document.getElementById('prodSummary').innerHTML = Ys.length===0
+        ? `因为这是一条“直接把 ${X} 弹空”的转移，所以不需要任何中间状态，也没有后续子变量，产生式就退化为一条：<strong>[${q}${X}${target}] → ${a}</strong>。`
+        : `当前右部长度 n=${Ys.length}。第一步先把 <strong>${X}</strong> 改写为 <strong>${rhs}</strong>，随后必须依次把 ${Ys.map(y=>`<strong>${y}</strong>`).join('、')} 完整弹出，因此需要枚举 ${Ys.length-1} 个中间状态，共生成 <strong>${prods.length}</strong> 条产生式。`;
+    }
+
+    function cartesian(arrays){
+      return arrays.reduce((acc, cur) => acc.flatMap(x => cur.map(y => [...x,y])), [[]]);
+    }
+
+    function fillInitList(){
+      const list = document.getElementById('initList');
+      list.innerHTML = states.map(p => `<div class="init">S → [q₀Z₀${p}]</div>`).join('');
+    }
+
+    [qSel,aSel,xSel,pSel,rhsSel,targetSel].forEach(el => el.addEventListener('change', render));
+
+    document.getElementById('toyBtn').addEventListener('click', () => {
+      qSel.value='q₀'; aSel.value='a'; xSel.value='X'; pSel.value='q₁'; rhsSel.value='BC'; targetSel.value='q₂'; render();
+    });
+    document.getElementById('epsBtn').addEventListener('click', () => {
+      qSel.value='q₁'; aSel.value='ε'; xSel.value='A'; pSel.value='q₂'; rhsSel.value='ε'; targetSel.value='q₂'; render();
+    });
+
+    qSel.value='q₀'; aSel.value='a'; xSel.value='X'; pSel.value='q₁'; rhsSel.value='BC'; targetSel.value='q₂';
+    fillInitList();
+    render();
+  </script>
+</body>
+</html>
